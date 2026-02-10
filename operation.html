@@ -1894,17 +1894,19 @@ function renderTable(rows, selectedDate){
   }
 
   function renderMissionRow(m){
-    const ft = getFromTo(m);
-    const s  = normStatus(getRawStatus(m));
+  const ft = getFromTo(m);
+  const s  = normStatus(getRawStatus(m));
 
-    return `
+  return `
       <tr>
         <td><strong>${escapeHtml(m.id || "-")}</strong></td>
         <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
         <td>${formatDepartureCell(m)}</td>
-        <td>${escapeHtml(getTypeLabelForTable(m))}</td>
-        <td>${escapeHtml(ft.from || "-")}</td>
-        <td>${escapeHtml(ft.to || "-")}</td>
+
+        <td class="col-type"><div class="clamp2">${escapeHtml(getTypeLabelForTable(m))}</div></td>
+        <td class="col-from"><div class="clamp2">${escapeHtml(ft.from || "-")}</div></td>
+        <td class="col-to"><div class="clamp2">${escapeHtml(ft.to || "-")}</div></td>
+
         <td>
           <div class="statusCell">
             <span class="badge ${badgeClassFromStatus(s)}">${escapeHtml(s)}</span>
@@ -1923,8 +1925,8 @@ function renderTable(rows, selectedDate){
           </div>
         </td>
       </tr>
-    `;
-  }
+  `;
+}
 
   let html = "";
 
