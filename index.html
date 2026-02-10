@@ -69,6 +69,19 @@
     font-size:12px;
     color:#555;
   }
+.pageHeader{
+  text-align:center;
+  margin-bottom:16px;
+}
+
+.pageHeader h1{
+  margin:10px 0 8px;
+}
+
+#clock{
+  font-size:44px;
+  font-weight:900;
+}
 
   .content{
   padding:18px 16px 34px;
@@ -590,8 +603,11 @@ td.col-to{
 </div>
 
 <div class="content">
-  <h1>Samitivej Communication Center</h1>
-  <div id="clock">--:--:--</div>
+  <div class="pageHeader">
+    <h1>Samitivej Communication Center</h1>
+    <div id="clock">--:--:--</div>
+  </div>
+
 
   <div class="actionbar">
     <div class="muted">Data source: local (form.html)</div>
@@ -631,8 +647,10 @@ td.col-to{
           <tr>
             <th style="width:140px;">Mission ID</th>
             <th style="width:110px;">Date</th>
-            <th style="width:110px;">Departure (SNH/SMCH)</th>
-            <th style="width:260px;">Mission Type</th>
+            <th style="width:110px;">Departure</th>
+            <th style="width:260px; white-space: normal; word-break: break-word;">
+  Mission Type
+</th>
             <th>From</th>
             <th>To</th>
             <th style="width:150px;">Status</th>
