@@ -71,10 +71,13 @@
   }
 
   .content{
-    padding:18px 16px 34px;
-    max-width:1320px;
-    margin:0 auto;
-  }
+  padding:18px 16px 34px;
+  max-width:1620px;
+  margin:0 auto;
+  text-align:left;
+}
+
+
   h1{
     font-size:28px;
     font-weight:800;
@@ -160,7 +163,8 @@
   }
 
   .tableWrap{
-    overflow:auto;
+    overflow-x:hidden;
+    overflow-y:auto;
     border-radius:14px;
     border:1px solid #eef2f7;
   }
@@ -168,26 +172,34 @@
   width:100%;
   border-collapse:separate;
   border-spacing:0;
-  min-width:1320px; /* ✅ from 1100 -> ~20% wider */
+  min-width:0;                /* ✅ เอา 1620px ออก ไม่งั้นยังไงก็ล้น */
+  table-layout:fixed;         /* ✅ บังคับให้คอลัมน์หดตามจอ */
   font-size:14px;
 }
+
   thead th{
-    position:sticky;
-    top:0;
-    background:#f8fafc;
-    color:#374151;
-    text-align:left;
-    padding:12px 12px;
-    border-bottom:1px solid #e5e7eb;
-    z-index:1;
-    white-space:nowrap;
-  }
+  position:sticky;
+  top:0;
+  background:#f8fafc;
+  color:#374151;
+  text-align:left;
+  padding:12px 12px;
+  border-bottom:1px solid #e5e7eb;
+  z-index:1;
+  white-space:nowrap;         /* header ไม่แตกบรรทัด */
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
   tbody td{
-    padding:12px 12px;
-    border-bottom:1px solid #f0f2f5;
-    color:#111827;
-    vertical-align:top;
-  }
+  padding:12px 12px;
+  border-bottom:1px solid #f0f2f5;
+  color:#111827;
+  vertical-align:top;
+  white-space:nowrap;         /* ✅ กันข้อความดันจนตารางล้น */
+  overflow:hidden;
+  text-overflow:ellipsis;     /* ✅ ตัดเป็น ... */
+}
   tbody tr:hover{ background:#fafcff; }
   .muted{ color:#6b7280; }
 
@@ -530,6 +542,32 @@
 .statusIcons.delayed{ color:#991b1b; }       /* แดง */
 .statusIcons.transporting{ color:#166534; }  /* เขียว */
 .statusIcons.returning{ color:#9a3412; }     /* ส้ม */
+
+td.col-type,
+td.col-from,
+td.col-to{
+  white-space: normal !important;
+  line-height: 1.25;
+
+  /* 2-line clamp */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clamp2{
+  white-space: normal !important;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 
 </style>
 </head>
