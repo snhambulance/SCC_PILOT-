@@ -648,6 +648,33 @@ tbody tr:hover{ background:#fafcff; }
   }
 }
 
+/* ✅ Allow 2 lines for Mission Type / From / To */
+td.col-type,
+td.col-from,
+td.col-to{
+  white-space: normal !important;
+  line-height: 1.25;
+
+  /* 2-line clamp */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clamp2{
+  white-space: normal !important;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
 </style>
 </head>
 
@@ -704,14 +731,14 @@ tbody tr:hover{ background:#fafcff; }
       <table>
         <thead>
           <tr>
-            <th style="width:140px;">Mission ID</th>
-            <th style="width:120px;">Date</th>
-            <th style="width:120px;">Departure</th>
-            <th style="width:220px;">Mission Type</th>
-            <th style="width:300px;">From</th>
-            <th style="width:300px;">To</th>
-            <th style="width:160px;">Status</th>
-            <th style="width:260px;">Actions</th>
+            <th style="width:100px;">Mission ID</th>
+            <th style="width:80px;">Date</th>
+            <th style="width:80px;">Departure</th>
+            <th style="width:120px;">Mission Type</th>
+            <th style="width:140px;">From</th>
+            <th style="width:140px;">To</th>
+            <th style="width:100px;">Status</th>
+            <th style="width:100px;">Actions</th>
           </tr>
         </thead>
         <tbody id="missionBody">
@@ -1789,30 +1816,32 @@ function renderTable(rows, selectedDate){
 
       return `
         <tr>
-          <td><strong>${escapeHtml(m.id || "-")}</strong></td>
-          <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
-          <td>${formatDepartureCell(m)}</td>
-          <td>${escapeHtml(getTypeLabelForTable(m))}</td>
-          <td>${escapeHtml(ft.from || "-")}</td>
-          <td>${escapeHtml(ft.to || "-")}</td>
-          <td>
-            <div class="statusCell">
-              <span class="badge ${badgeClassFromStatus(s)}">${escapeHtml(s)}</span>
-              ${getStatusIconsHTML(s)}
-            </div>
-          </td>
-          <td>
-            <div class="actionCell">
-              <button class="btn light tiny" type="button" onclick="openDetails('${escapeHtml(m.id)}')">Details</button>
-              ${
-                (() => {
-                  const st = getTableOnDutyBtnState(m);
-                  return `<button class="btn pill tiny ${st.cls}" type="button" onclick="openStamp('${escapeHtml(m.id)}')">${escapeHtml(st.text)}</button>`;
-                })()
-              }
-            </div>
-          </td>
-        </tr>
+  <td><strong>${escapeHtml(m.id || "-")}</strong></td>
+  <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
+  <td>${formatDepartureCell(m)}</td>
+
+  <td class="col-type"><div class="clamp2">${escapeHtml(getTypeLabelForTable(m))}</div></td>
+  <td class="col-from"><div class="clamp2">${escapeHtml(ft.from || "-")}</div></td>
+  <td class="col-to"><div class="clamp2">${escapeHtml(ft.to || "-")}</div></td>
+
+  <td>
+    <div class="statusCell">
+      <span class="badge ${badgeClassFromStatus(s)}">${escapeHtml(s)}</span>
+      ${getStatusIconsHTML(s)}
+    </div>
+  </td>
+  <td>
+    <div class="actionCell">
+      <button class="btn light tiny" type="button" onclick="openDetails('${escapeHtml(m.id)}')">Details</button>
+      ${
+        (() => {
+          const st = getTableOnDutyBtnState(m);
+          return `<button class="btn pill tiny ${st.cls}" type="button" onclick="openStamp('${escapeHtml(m.id)}')">${escapeHtml(st.text)}</button>`;
+        })()
+      }
+    </div>
+  </td>
+</tr>
       `;
     }).join("");
 
