@@ -1,0 +1,1542 @@
+<!-- =========================
+FORM.HTML (copy + paste) ✅ UPDATED (SYNC)
+✅ Added: HHC_PICKUP / HHC_SEND (as you had)
+✅ Added: emitSync() so other pages refresh instantly
+- writeMissions() now emits sync ping
+✅ Added: Age (days/months/years) with SOFT LOCK
+✅ Fixed: Submit logic (Edit-mode addIfEmpty for age fields is in the correct block)
+========================= -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Mission Form</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<style>
+  body{
+    margin:0;
+    background:#f4f6f8;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  }
+  .wrap{ max-width:980px; margin:22px auto; padding:0 16px; }
+  .card{
+    background:white;
+    border-radius:18px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.12);
+    padding:18px;
+  }
+  h1{ margin:0 0 8px; font-size:22px; font-weight:900; color:#111827; }
+  .muted{ color:#6b7280; font-size:13px; margin-bottom:14px; }
+
+  .grid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  .full{ grid-column: 1 / -1; }
+
+  label{ font-size:13px; font-weight:800; color:#374151; }
+  input, select, textarea{
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:10px 12px;
+    font-size:14px;
+    outline:none;
+    background:#fff;
+  }
+  textarea{ min-height:90px; resize:vertical; }
+  input:focus, select:focus, textarea:focus{ border-color:#9ca3af; }
+
+  .section{
+    margin-top:14px;
+    border:1px solid #eef2f7;
+    border-radius:16px;
+    padding:14px;
+    background:#fff;
+  }
+  .section h2{ margin:0 0 10px; font-size:16px; font-weight:900; color:#111827; }
+
+  .actions{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    margin-top:16px;
+    flex-wrap:wrap;
+    padding-top:14px;
+    border-top:1px solid #eef2f7;
+  }
+  .btn{
+    appearance:none; border:0; border-radius:12px;
+    padding:10px 14px; font-weight:900; cursor:pointer;
+    background:#0b6b5b; color:white;
+    box-shadow:0 3px 10px rgba(0,0,0,0.12);
+  }
+  .btn.secondary{ background:#111827; }
+  .btn.danger{ background:#b42318; }
+  .btn.light{ background:#e5e7eb; color:#111827; box-shadow:none; }
+  .btn.tiny{ padding:8px 10px; border-radius:10px; font-size:12px; box-shadow:none; }
+
+  .hint{ font-size:12px; color:#6b7280; margin-top:2px; }
+  .lockHint{
+    background:#fff7e6;
+    border:1px solid #ffe0a3;
+    color:#7a5200;
+    border-radius:14px;
+    padding:10px 12px;
+    font-size:12px;
+    margin:10px 0 0;
+  }
+
+  .pill{
+    display:inline-block;
+    padding:6px 10px;
+    border-radius:999px;
+    font-weight:900;
+    font-size:12px;
+    background:#f3f4f6;
+    border:1px solid #e5e7eb;
+    color:#111827;
+  }
+
+  /* MAP MODAL */
+  .modalOverlay{
+    position:fixed; inset:0;
+    background:rgba(17,24,39,0.55);
+    display:none; align-items:center; justify-content:center;
+    padding:18px; z-index:9999;
+  }
+  .modal{
+    width:min(980px, 100%);
+    background:white;
+    border-radius:18px;
+    box-shadow:0 18px 50px rgba(0,0,0,0.28);
+    overflow:hidden;
+  }
+  .modalHeader{
+    padding:14px 16px;
+    background:#f8fafc;
+    border-bottom:1px solid #e5e7eb;
+    display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+  }
+  .modalTitle{ margin:0; font-size:16px; font-weight:1000; color:#111827; }
+  .modalSub{ margin:4px 0 0; font-size:12px; color:#6b7280; }
+  .modalBody{ padding:14px 16px 16px; }
+  #map{ height:420px; border-radius:14px; border:1px solid #eef2f7; }
+  .modalActions{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:12px 16px; border-top:1px solid #e5e7eb; background:#fff; flex-wrap:wrap;
+  }
+  .actionsLeft, .actionsRight{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+  .searchRow{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px;
+  }
+  .results{
+    width:100%;
+    max-height:160px;
+    overflow:auto;
+    border:1px solid #eef2f7;
+    border-radius:14px;
+    background:#fff;
+    margin-top:8px;
+    display:none;
+  }
+  .resultItem{
+    padding:10px 12px;
+    border-bottom:1px solid #f0f2f5;
+    cursor:pointer;
+    font-size:13px;
+  }
+  .resultItem:hover{ background:#fafcff; }
+
+  @media (max-width: 720px){
+    .grid{ grid-template-columns:1fr; }
+    #map{ height:360px; }
+  }
+
+  /* Soft-lock look for disabled inputs (put at END of <style>) */
+input:disabled, select:disabled, textarea:disabled{
+  background:#f3f4f6 !important;
+  color:#6b7280 !important;
+  border-color:#e5e7eb !important;
+  cursor:not-allowed !important;
+  opacity:1 !important;
+}
+
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="card">
+    <h1 id="pageTitle">Mission Request Form</h1>
+    <div class="muted">
+      Mission Details order: <b>Base → From + From detail → To + To detail → Departure</b>
+      <br>Vehicle Type (dropdown) อยู่ในฟอร์มหลักด้านบน
+      <br><b>Rule:</b> Ambulance only เฉพาะ <b>Mission Group 1 (EMS)</b> และ <b>Mission Group 2 (IFT)</b> เท่านั้น — นอกนั้นเลือก Vehicle ได้ครบ
+    </div>
+
+    <form id="missionForm">
+      <!-- ===== BASIC ===== -->
+      <div class="grid">
+        <div class="field">
+          <label>Mission ID *</label>
+          <input id="id" required placeholder="e.g., 2025-IFT-OUT-0001">
+          <div class="hint">ถ้า ID ซ้ำ (ในโหมด Add) ระบบจะอัปเดตเคสเดิม</div>
+        </div>
+
+        <div class="field">
+  <label>Status *</label>
+  <select id="missionStatus" required>
+    <option value="Scheduled">Scheduled</option>
+    <option value="Activated">Activated</option>
+  </select>
+  <div class="hint">
+    * Add mode: เลือกได้แค่ Scheduled / Activated<br>
+    * Edit mode: status จะถูก lock (ให้ระบบจัดการจาก operation/index)
+  </div>
+</div>
+
+        <div class="field">
+          <label>Date *</label>
+          <input id="date" type="date" required>
+        </div>
+
+        <div class="field">
+          <label>Time (backup only)</label>
+          <input id="time" type="time" placeholder="(optional)">
+        </div>
+
+        <div class="field">
+          <label>Mission Group *</label>
+          <select id="group" required></select>
+        </div>
+
+        <div class="field">
+          <label>Mission Type *</label>
+          <select id="typeKey" required></select>
+        </div>
+
+        <div class="field">
+          <label>Display Label</label>
+          <input id="typeDisplay" readonly>
+        </div>
+
+        <div class="field">
+          <label>Vehicle Type *</label>
+          <select id="vehicleTypeMain" required></select>
+          <div class="hint">Group 1–2 = Ambulance only, Group 3–7 = เลือกได้ครบ</div>
+        </div>
+
+        <div class="field full">
+          <label>Vehicle (free text)</label>
+          <input id="vehicle" placeholder="Ambulance 01 / Van / etc.">
+        </div>
+
+        <div class="field full">
+          <label>Notes</label>
+          <textarea id="notes" placeholder="Short notes..."></textarea>
+        </div>
+      </div>
+
+      <div class="lockHint" id="editLockHint" style="display:none;">
+        <b>Edit mode (Add-only):</b> ช่องที่เคยกรอกแล้วจะถูกล็อก แก้ไม่ได้ (เติมได้เฉพาะช่องที่ว่าง) <br>
+        <b>ยกเว้น Map pin:</b> ย้ายหมุดได้เสมอ และจะบันทึกใน <b>locationChangeLog[]</b>
+      </div>
+
+      <!-- ===== PATIENT INFO ===== -->
+      <div class="section">
+        <h2>Patient Information — ข้อมูลผู้ป่วย</h2>
+        <div class="grid">
+          <div class="field full">
+            <label>Full Name</label>
+            <input id="p_fullName" placeholder="ชื่อ-สกุล">
+          </div>
+
+          <div class="field">
+            <label>Gender</label>
+            <select id="p_gender">
+              <option value="">-</option>
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Age (days)</label>
+            <input id="p_ageDays" type="number" min="0" step="1" placeholder="e.g., 10">
+          </div>
+
+          <div class="field">
+            <label>Age (months)</label>
+            <input id="p_ageMonths" type="number" min="0" step="1" placeholder="e.g., 6">
+          </div>
+
+          <div class="field">
+            <label>Age (years)</label>
+            <input id="p_ageYears" type="number" min="0" step="1" placeholder="e.g., 5">
+            <div class="hint">Fill only one: days OR months OR years (ระบบจะล็อกช่องอื่นอัตโนมัติ)</div>
+          </div>
+
+          <div class="field">
+            <label>Weight (kg)</label>
+            <input id="p_weightKg" type="number" min="0" step="0.1" placeholder="e.g., 18">
+          </div>
+
+          <div class="field">
+            <label>Nationality</label>
+            <input id="p_nationality" placeholder="e.g., Thai">
+          </div>
+
+          <div class="field">
+            <label>HN</label>
+            <input id="p_hn" placeholder="HN">
+          </div>
+
+          <div class="field">
+            <label>Ward</label>
+            <input id="p_ward" placeholder="Ward">
+          </div>
+
+          <div class="field full">
+            <label>Diagnosis</label>
+            <input id="p_diagnosis" placeholder="Diagnosis">
+          </div>
+
+          <div class="field full">
+            <label>Purpose of Transport (for Service/HHC/Other)</label>
+            <input id="p_purpose" placeholder="เหตุผลในการขนย้ายผู้ป่วย">
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== DETAILS (dynamic) ===== -->
+      <div class="section">
+        <h2>Mission Details (Base / Locations / Time Log)</h2>
+        <div class="grid" id="detailsGrid"></div>
+        <div class="hint" style="margin-top:8px;">
+          From detail / To detail จะโชว์ใน Details modal เท่านั้น (ไม่โชว์ในตาราง)
+        </div>
+      </div>
+
+      <!-- ===== MAP PIN (optional) ===== -->
+      <div class="section">
+        <h2>Map Pin (optional) — เลือกหมุดให้แม่นยำ</h2>
+
+        <div style="display:flex; justify-content:flex-start; margin-bottom:12px;">
+          <button type="button" class="btn secondary tiny" id="openRouteBtn">Open Route (Google Maps)</button>
+        </div>
+
+        <div class="field full">
+          <label>FROM pin</label>
+          <input id="fromLatLng" placeholder="0.000000, 0.000000" readonly>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+            <button type="button" class="btn light tiny" id="openGMapsFromBtn">Open Google Maps</button>
+            <button type="button" class="btn tiny" id="openMapFromBtn">Pick on Map (OSM)</button>
+          </div>
+
+          <div class="hint">
+            Tip: ค้นหาใน Google Maps แล้ว copy “lat,lng” มา paste ได้ (ดูช่องด้านล่าง)
+          </div>
+        </div>
+
+        <div class="field full" style="margin-top:12px;">
+          <label>TO pin</label>
+          <input id="toLatLng" placeholder="0.000000, 0.000000" readonly>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+            <button type="button" class="btn light tiny" id="openGMapsToBtn">Open Google Maps</button>
+            <button type="button" class="btn tiny" id="openMapToBtn">Pick on Map (OSM)</button>
+          </div>
+        </div>
+
+        <div class="field full" style="margin-top:12px;">
+          <label>Paste Google Maps link OR lat,lng (will set pin)</label>
+          <input id="pinPaste" placeholder="e.g., 13.7000,100.6000  OR  https://maps.google.com/...">
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+            <button type="button" class="btn secondary tiny" id="applyPasteFromBtn">Apply to FROM</button>
+            <button type="button" class="btn secondary tiny" id="applyPasteToBtn">Apply to TO</button>
+            <button type="button" class="btn danger tiny" id="clearPinsBtn">Clear</button>
+          </div>
+
+          <div class="hint">
+            Pin แก้ได้เสมอ และจะถูกบันทึกใน <b>locationChangeLog[]</b> โดยอัตโนมัติ
+          </div>
+        </div>
+      </div>
+
+      <!-- ✅ ALWAYS show buttons at the bottom -->
+      <div class="actions">
+        <button type="button" class="btn light" id="backBtn">Back</button>
+        <button type="button" class="btn danger" id="resetBtn">Clear Form</button>
+        <button type="submit" class="btn" id="saveBtn">Save / Update</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- MAP MODAL -->
+<div class="modalOverlay" id="mapOverlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modalHeader">
+      <div>
+        <h3 class="modalTitle" id="mapTitle">Pick on Map</h3>
+        <div class="modalSub" id="mapSub">Search แล้วเลือกผลลัพธ์ หรือ ลากหมุดเพื่อความแม่นยำ</div>
+      </div>
+      <button class="btn light tiny" id="closeMapBtn" type="button">Close</button>
+    </div>
+    <div class="modalBody">
+      <div class="searchRow">
+        <input id="mapSearch" placeholder="Search place (OSM) เช่น Samitivej Srinakarin / Bangkok Airport / ชื่อถนน..." style="flex:1;">
+        <button class="btn secondary tiny" type="button" id="mapSearchBtn">Search</button>
+        <button class="btn light tiny" type="button" id="useCurrentCenterBtn">Use Center</button>
+      </div>
+      <div class="results" id="mapResults"></div>
+      <div id="map"></div>
+      <div class="hint" style="margin-top:8px;">
+        หมุดลากได้ • เมื่อกด Save pin จะบันทึกใน locationChangeLog[] (ไม่มี alert)
+      </div>
+    </div>
+    <div class="modalActions">
+      <div class="actionsLeft">
+        <span class="pill" id="pickedLatLng">-</span>
+      </div>
+      <div class="actionsRight">
+        <button class="btn light tiny" type="button" id="cancelMapBtn">Cancel</button>
+        <button class="btn tiny" type="button" id="saveMapBtn">Save pin</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+/* =======================
+   GLOBALS (MUST be first)
+======================= */
+const STORAGE_KEY = "SCC_MISSIONS_V1";
+
+/* ✅ IMPORTANT:
+   Don't use variable name "status" (can collide with window.status)
+   Use missionStatusEl = real <select id="missionStatus"> */
+const missionStatusEl = document.getElementById("missionStatus");
+
+if (!missionStatusEl){
+  console.warn("missionStatus <select> not found. Check id='missionStatus' in HTML.");
+}
+
+/* ✅ SYNC (NEW) */
+const SYNC_KEY = "__SCC_SYNC_PING__";
+const BC_NAME  = "SCC_SYNC_V1";
+const bc = ("BroadcastChannel" in window) ? new BroadcastChannel(BC_NAME) : null;
+
+function emitSync(payload){
+  try{
+    const msg = Object.assign({ t: Date.now() }, payload || {});
+    // trigger storage event (cross-tab)
+    localStorage.setItem(SYNC_KEY, JSON.stringify(msg));
+    // faster cross-tab
+    if (bc) bc.postMessage(msg);
+  }catch(err){
+    // เงียบไว้ก็ได้ แต่ใส่ไว้ช่วย debug
+    // console.warn("emitSync failed", err);
+  }
+}
+
+function readMissions(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch{ return []; }
+}
+
+/* ✅ writeMissions now emits sync ping */
+function writeMissions(arr, meta){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  emitSync({
+    source: "form",
+    action: meta?.action || "save",
+    missionId: meta?.missionId || null
+  });
+}
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+function toISODateLocal(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function getQueryParam(name){ return (new URL(location.href)).searchParams.get(name); }
+function nowISO(){ return new Date().toISOString(); }
+function isEmpty(v){ return v === undefined || v === null || String(v).trim() === ""; }
+
+/* ✅ Edit-mode flags declared BEFORE any build/init calls */
+const editId = getQueryParam("edit");
+let isEditMode = false;
+let existingMissionSnapshot = null;
+let originalId = null;
+
+/* ========= Mission dropdown master =========
+   ✅ UPDATED: Added HHC_PICKUP / HHC_SEND
+=========================================== */
+const MISSION_MASTER = [
+  { group:"1. EMS", items:[
+    { key:"EMS_BASIC", label:"1.1 Basic EMS", display:"EMS" },
+    { key:"EMS_ADV",   label:"1.2 Advance EMS", display:"EMS" }
+  ]},
+  { group:"2. Interfacility Transfer (IFT)", items:[
+    { key:"IFT_BASIC_IN",   label:"2.1 Basic IFT – Refer In",   display:"IFT – Refer In"  },
+    { key:"IFT_ADV_IN",     label:"2.2 Advance IFT – Refer In", display:"IFT – Refer In"  },
+    { key:"IFT_BASIC_OUT",  label:"2.3 Basic IFT – Refer Out",  display:"IFT – Refer Out" },
+    { key:"IFT_ADV_OUT",    label:"2.4 Advance IFT – Refer Out",display:"IFT – Refer Out" }
+  ]},
+  { group:"3. Airport Service", items:[
+    { key:"AP_CLINIC_IFT",  label:"3.1 Airport Clinic IFT (รับผู้ป่วยจากคลินิกสนามบิน)", display:"IFT – Refer In" },
+    { key:"AP_ESCORT_IN",   label:"3.2 Airport escort and transport (รับ-คนไข้นอกเครื่อง)", display:"Escort - In" },
+    { key:"AP_ESCORT_OUT",  label:"3.3 Airport escort and transport (ส่ง-คนไข้นอกเครื่อง)", display:"Escort - Out" },
+    { key:"TARMAC_IN",      label:"3.4 Tarmac : Airport escort and transport (รับ-คนไข้ข้างเครื่อง)", display:"Escort - In" },
+    { key:"TARMAC_OUT",     label:"3.5 Tarmac : Airport escort and transport (ส่ง-คนไข้ข้างเครื่อง)", display:"Escort - Out" }
+  ]},
+  { group:"4. Procedure (รับ-ส่งคนไข้ทำหัตถการ)", items:[
+    { key:"PROC_SEND_WAIT_PICK", label:"4.1 Transport for procedural appointment (ส่งและรอรับ-คนไข้ไปทำหัตถการ)", display:"IFT – Refer In, IFT – Refer Out" },
+    { key:"PROC_SEND",           label:"4.2 Transport procedural appointment (ส่ง-คนไข้ไปทำหัตถการ)", display:"IFT – Refer Out" },
+    { key:"PROC_PICK",           label:"4.3 Transport procedural appointment (รับ-คนไข้จากการไปทำหัตถการ)", display:"IFT – Refer In" }
+  ]},
+  { group:"5. Home service", items:[
+    { key:"HOME_PICKUP", label:"5.1 Home pickup (รับ-คนไข้จากบ้าน)", display:"Service" },
+    { key:"HOME_DISCH",  label:"5.2 Discharge home (ส่ง-คนไข้กลับบ้าน)", display:"Service" }
+  ]},
+  { group:"6. Home Health Care", items:[
+    { key:"HHC_PICKUP", label:"6.1 Home Health Care (รับ-คนไข้จากบ้าน)", display:"Service" },
+    { key:"HHC_SEND",   label:"6.2 Home Health Care (ส่ง-คนไข้กลับบ้าน)", display:"Service" },
+    { key:"HHC", label:"6. Home Health Care (legacy)", display:"Service" }
+  ]},
+  { group:"7. Other", items:[
+    { key:"OTHER", label:"7. Other (เขียนหมายเหตุเพิ่มได้)", display:"Service" }
+  ]}
+];
+
+const TYPE_BY_KEY = Object.fromEntries(
+  MISSION_MASTER.flatMap(g => g.items.map(it => [it.key, it]))
+);
+
+/* ========= Vehicle options ========= */
+function isAmbulanceOnlyGroupIndex(groupIndex){
+  return Number(groupIndex) === 0 || Number(groupIndex) === 1;
+}
+function fillVehicleTypeDropdown(keepValueIfPossible=true){
+  const all = ["Ambulance","Mobility","Van","Car"];
+  const allowed = isAmbulanceOnlyGroupIndex(group.value) ? ["Ambulance"] : all;
+  const prev = vehicleTypeMain.value;
+
+  vehicleTypeMain.innerHTML = "";
+  allowed.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v;
+    vehicleTypeMain.appendChild(opt);
+  });
+
+  if (keepValueIfPossible && allowed.includes(prev)) vehicleTypeMain.value = prev;
+  else vehicleTypeMain.value = allowed[0] || "Ambulance";
+}
+
+/* ========= Details fields ========= */
+const COMMON_DETAILS_FIELDS = {
+  base: [
+    { id:"baseLocation", label:"Base (SNH / SMCH)", type:"select", options:["SNH","SMCH"], required:true },
+  ],
+  fromDetail: [
+    { id:"fromDetail", label:"From detail (optional)", type:"text", full:true, placeholder:"เช่น อาคาร/ชั้น/วอร์ด/จุดนัด/Gate/Address/Contact" },
+  ],
+  toDetail: [
+    { id:"toDetail", label:"To detail (optional)", type:"text", full:true, placeholder:"เช่น อาคาร/ชั้น/วอร์ด/จุดส่ง/Address/Contact" },
+  ],
+  departure: [
+    { id:"departureFromHospital", label:"Departure from SNH/SMCH hospital (เวลาที่ออก/จะออก)", type:"time", required:true, full:true }
+  ]
+};
+
+const DETAILS_FIELDS = {
+  EMS_BASIC: [
+    ...COMMON_DETAILS_FIELDS.base,
+    { id:"origin", label:"From (scene/location)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.fromDetail,
+    { id:"destination", label:"To (destination)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.toDetail,
+    ...COMMON_DETAILS_FIELDS.departure
+  ],
+  EMS_ADV: "EMS_BASIC",
+
+  IFT_BASIC_OUT: [
+    ...COMMON_DETAILS_FIELDS.base,
+    { id:"referringHospital", label:"From (scene/location)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.fromDetail,
+    { id:"receivingHospital", label:"To (destination)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.toDetail,
+    { id:"preDepartureBriefing", label:"Pre-departure Briefing — เตรียมทีมก่อนออก", type:"time" },
+    ...COMMON_DETAILS_FIELDS.departure
+  ],
+  IFT_ADV_OUT: "IFT_BASIC_OUT",
+
+  IFT_BASIC_IN: [
+    ...COMMON_DETAILS_FIELDS.base,
+    { id:"referringHospital", label:"From (scene/location)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.fromDetail,
+    { id:"receivingHospital", label:"To (destination)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.toDetail,
+    { id:"preDepartureBriefing", label:"Pre-departure Briefing — เตรียมทีมก่อนออก", type:"time" },
+    { id:"schedArriveRefHosp", label:"Scheduled Arrival at Referring Hospital — เวลานัดถึง รพ.ต้นทาง", type:"time" },
+    ...COMMON_DETAILS_FIELDS.departure
+  ],
+  IFT_ADV_IN: "IFT_BASIC_IN",
+
+  AP_CLINIC_IFT: [
+    ...COMMON_DETAILS_FIELDS.base,
+    { id:"pickupPoint", label:"From (scene/location)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.fromDetail,
+    { id:"receivingHospital", label:"To (destination)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.toDetail,
+    ...COMMON_DETAILS_FIELDS.departure
+  ],
+
+  AP_ESCORT_IN: [
+    ...COMMON_DETAILS_FIELDS.base,
+    { id:"pickupPoint", label:"From (scene/location)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.fromDetail,
+    { id:"destinationHospital", label:"To (destination)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.toDetail,
+    { id:"schedArriveAirport", label:"Scheduled Arrival at Airport — เวลานัดถึงสนามบิน", type:"time" },
+    { id:"schedFlightArrive", label:"Scheduled Flight Arrival — เวลาเที่ยวบินถึง", type:"time" },
+    ...COMMON_DETAILS_FIELDS.departure
+  ],
+  TARMAC_IN: "AP_ESCORT_IN",
+
+  AP_ESCORT_OUT: [
+    ...COMMON_DETAILS_FIELDS.base,
+    { id:"sendingHospital", label:"From (scene/location)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.fromDetail,
+    { id:"dropoffPoint", label:"To (destination)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.toDetail,
+    { id:"schedArriveAirport", label:"Scheduled Arrival at Airport — เวลานัดถึงสนามบิน", type:"time" },
+    { id:"schedFlightDepart", label:"Scheduled Flight Departure — เวลาเที่ยวบินออก", type:"time" },
+    ...COMMON_DETAILS_FIELDS.departure
+  ],
+  TARMAC_OUT: "AP_ESCORT_OUT",
+
+  PROC_SEND_WAIT_PICK: [
+    ...COMMON_DETAILS_FIELDS.base,
+    { id:"originHospital", label:"From (scene/location)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.fromDetail,
+    { id:"procedureFacility", label:"To (destination)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.toDetail,
+    { id:"preDepartureBriefing", label:"Pre-departure Briefing — เตรียมทีมก่อนออก", type:"time" },
+    ...COMMON_DETAILS_FIELDS.departure
+  ],
+  PROC_SEND: "PROC_SEND_WAIT_PICK",
+
+  PROC_PICK: [
+    ...COMMON_DETAILS_FIELDS.base,
+    { id:"procedureFacility", label:"From (scene/location)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.fromDetail,
+    { id:"returnHospital", label:"To (destination)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.toDetail,
+    { id:"preDepartureBriefing", label:"Pre-departure Briefing — เตรียมทีมก่อนออก", type:"time" },
+    ...COMMON_DETAILS_FIELDS.departure
+  ],
+
+  HOME_PICKUP: [
+    { id:"baseLocation", label:"Base (SNH / SMCH) (optional)", type:"select", options:["","SNH","SMCH"] },
+    { id:"origin", label:"From (scene/location)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.fromDetail,
+    { id:"destination", label:"To (destination)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.toDetail,
+    { id:"schedArriveHome", label:"Scheduled Arrival at Home — เวลานัดถึงบ้านผู้ป่วย", type:"time" },
+    { id:"departureFromHospital", label:"Departure from hospital (เวลาที่ออก/จะออก)", type:"time", required:true, full:true }
+  ],
+
+  HOME_DISCH: [
+    ...COMMON_DETAILS_FIELDS.base,
+    { id:"origin", label:"From (scene/location)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.fromDetail,
+    { id:"destination", label:"To (destination)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.toDetail,
+    { id:"preDepartureBriefing", label:"Pre-departure Briefing — เตรียมทีมก่อนออก", type:"time" },
+    ...COMMON_DETAILS_FIELDS.departure
+  ],
+
+  HHC: [
+    { id:"baseLocation", label:"Base (SNH / SMCH) (optional)", type:"select", options:["","SNH","SMCH"] },
+    { id:"origin", label:"From (scene/location)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.fromDetail,
+    { id:"destination", label:"To (destination)", type:"text", full:true },
+    ...COMMON_DETAILS_FIELDS.toDetail,
+    { id:"departureFromHospital", label:"Departure from hospital (เวลาที่ออก/จะออก)", type:"time", required:true, full:true }
+  ],
+
+  HHC_PICKUP: "HHC",
+  HHC_SEND: "HHC",
+
+  OTHER: "HHC"
+};
+
+function resolveFields(typeKey){
+  const cfg = DETAILS_FIELDS[typeKey];
+  if (Array.isArray(cfg)) return cfg;
+  if (typeof cfg === "string") return resolveFields(cfg);
+  return [...COMMON_DETAILS_FIELDS.base, ...COMMON_DETAILS_FIELDS.departure];
+}
+
+/* ========= Map pin state ========= */
+const detailsState = {
+  fromLat: null, fromLng: null,
+  toLat: null, toLng: null,
+  locationChangeLog: [],
+};
+function setLatLngText(){
+  fromLatLng.value = (detailsState.fromLat!=null && detailsState.fromLng!=null) ? `${detailsState.fromLat},${detailsState.fromLng}` : "-";
+  toLatLng.value   = (detailsState.toLat!=null && detailsState.toLng!=null)   ? `${detailsState.toLat},${detailsState.toLng}` : "-";
+}
+
+/* ========= Add-only locking ========= */
+function lockIfHasValue(el, existingValue){
+  if (!isEditMode) return;
+  if (!el) return;
+  if (["pinPaste","fromLatLng","toLatLng"].includes(el.id)) return;
+
+  if (!isEmpty(existingValue)){
+    el.disabled = true;
+    el.title = "Edit mode: field already filled (add-only)";
+  }
+}
+function lockFilledFieldsForEdit(existingMission){
+  if (!isEditMode || !existingMission) return;
+  const old = existingMission;
+  const od = old.details || {};
+
+  lockIfHasValue(id, old.id);
+  lockIfHasValue(date, String(old.date||"").slice(0,10));
+  lockIfHasValue(time, old.time);
+  lockIfHasValue(group, old.missionGroup);
+  lockIfHasValue(typeKey, old.typeKey);
+  lockIfHasValue(vehicleTypeMain, od.vehicleType);
+  lockIfHasValue(vehicle, old.vehicle);
+  lockIfHasValue(notes, old.notes);
+
+  lockIfHasValue(p_fullName, od.fullName);
+  lockIfHasValue(p_gender, od.gender);
+
+  /* ✅ Updated for age fields (days/months/years) */
+  lockIfHasValue(p_ageDays, od.ageDays);
+  lockIfHasValue(p_ageMonths, od.ageMonths);
+  lockIfHasValue(p_ageYears, od.ageYears);
+
+  lockIfHasValue(p_weightKg, od.weightKg);
+  lockIfHasValue(p_nationality, od.nationality);
+  lockIfHasValue(p_hn, od.hn);
+  lockIfHasValue(p_ward, od.ward);
+  lockIfHasValue(p_diagnosis, od.diagnosis);
+  lockIfHasValue(p_purpose, od.purpose);
+
+  const fields = resolveFields(typeKey.value);
+  fields.forEach(f => {
+    const el = document.getElementById("d_" + f.id);
+    lockIfHasValue(el, od[f.id]);
+  });
+}
+
+/* ========= Build details fields ========= */
+function buildDetailsFields(existingDetails = {}){
+  const fields = resolveFields(typeKey.value);
+  detailsGrid.innerHTML = "";
+
+  fields.forEach(f => {
+    const wrap = document.createElement("div");
+    wrap.className = "field" + (f.full ? " full" : "");
+
+    const lab = document.createElement("label");
+    lab.textContent = f.label + (f.required ? " *" : "");
+    wrap.appendChild(lab);
+
+    let input;
+    if (f.type === "select"){
+      input = document.createElement("select");
+      (f.options || []).forEach(optVal => {
+        const opt = document.createElement("option");
+        opt.value = optVal;
+        opt.textContent = optVal === "" ? "-" : optVal;
+        input.appendChild(opt);
+      });
+      if (existingDetails[f.id] !== undefined) input.value = existingDetails[f.id];
+    } else if (f.type === "time"){
+      input = document.createElement("input");
+      input.type = "time";
+      input.value = existingDetails[f.id] || "";
+    } else {
+      input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = f.placeholder || "";
+      input.value = existingDetails[f.id] || "";
+    }
+
+    input.id = "d_" + f.id;
+
+// ✅ departureFromHospital: required เฉพาะตอน Scheduled
+if (f.required){
+  if (f.id === "departureFromHospital"){
+    input.required = (String(missionStatus.value) !== "Activated");
+  } else {
+    input.required = true;
+  }
+}
+
+    wrap.appendChild(input);
+    detailsGrid.appendChild(wrap);
+  });
+
+  if (isEditMode && existingMissionSnapshot){
+    lockFilledFieldsForEdit(existingMissionSnapshot);
+  }
+}
+
+/* ========= Dropdown init ========= */
+function initMissionDropdown(){
+  group.innerHTML = "";
+  MISSION_MASTER.forEach((g, i) => {
+    const opt = document.createElement("option");
+    opt.value = String(i);
+    opt.textContent = g.group;
+    group.appendChild(opt);
+  });
+  group.value = "0";
+  populateTypeDropdown();
+}
+function populateTypeDropdown(){
+  const g = MISSION_MASTER[Number(group.value)];
+  typeKey.innerHTML = "";
+  g.items.forEach(it => {
+    const opt = document.createElement("option");
+    opt.value = it.key;
+    opt.textContent = it.label;
+    typeKey.appendChild(opt);
+  });
+  typeKey.value = g.items[0].key;
+  syncTypeMeta();
+  fillVehicleTypeDropdown(false);
+  buildDetailsFields(existingMissionSnapshot?.details || {});
+}
+function syncTypeMeta(){
+  const it = TYPE_BY_KEY[typeKey.value];
+  typeDisplay.value = it?.display ?? "";
+}
+
+group.addEventListener("change", () => {
+  populateTypeDropdown();
+  fillVehicleTypeDropdown(true);
+});
+typeKey.addEventListener("change", () => {
+  syncTypeMeta();
+  fillVehicleTypeDropdown(true);
+  buildDetailsFields(existingMissionSnapshot?.details || {});
+});
+
+/* ========= Header defaults ========= */
+date.value = toISODateLocal(new Date());
+missionStatusEl.value = "Scheduled";
+
+
+/* =======================
+   AGE SOFT-LOCK (days/months/years)
+   - fill 1 => disable the other 2 + clear values
+======================= */
+function _valNum(el){
+  if (!el) return "";
+  const v = String(el.value ?? "").trim();
+  return v;
+}
+function _hasVal(el){
+  const v = _valNum(el);
+  return v !== "" && !Number.isNaN(Number(v));
+}
+function _setDisabled(el, yes){
+  if (!el) return;
+  el.disabled = !!yes;
+  el.style.opacity = ""; // ให้ CSS จัดการหน้าตา
+}
+function applyAgeSoftLock(){
+  if (!document.getElementById("p_ageDays")) return;
+
+  const hasDays   = _hasVal(p_ageDays);
+  const hasMonths = _hasVal(p_ageMonths);
+  const hasYears  = _hasVal(p_ageYears);
+
+  if (hasDays){
+    if (_valNum(p_ageMonths) !== "") p_ageMonths.value = "";
+    if (_valNum(p_ageYears)  !== "") p_ageYears.value  = "";
+    _setDisabled(p_ageMonths, true);
+    _setDisabled(p_ageYears,  true);
+    _setDisabled(p_ageDays,   false);
+    return;
+  }
+  if (hasMonths){
+    if (_valNum(p_ageDays) !== "") p_ageDays.value = "";
+    if (_valNum(p_ageYears)!== "") p_ageYears.value = "";
+    _setDisabled(p_ageDays,  true);
+    _setDisabled(p_ageYears, true);
+    _setDisabled(p_ageMonths,false);
+    return;
+  }
+  if (hasYears){
+    if (_valNum(p_ageDays)   !== "") p_ageDays.value   = "";
+    if (_valNum(p_ageMonths) !== "") p_ageMonths.value = "";
+    _setDisabled(p_ageDays,   true);
+    _setDisabled(p_ageMonths, true);
+    _setDisabled(p_ageYears,  false);
+    return;
+  }
+
+  _setDisabled(p_ageDays,   false);
+  _setDisabled(p_ageMonths, false);
+  _setDisabled(p_ageYears,  false);
+}
+function initAgeSoftLock(){
+  if (!document.getElementById("p_ageDays")) return;
+  p_ageDays.addEventListener("input", applyAgeSoftLock);
+  p_ageMonths.addEventListener("input", applyAgeSoftLock);
+  p_ageYears.addEventListener("input", applyAgeSoftLock);
+  applyAgeSoftLock();
+}
+
+/* ========= Load edit ========= */
+function loadForEdit(missionId){
+  const missions = readMissions();
+  const m = missions.find(x => String(x.id) === String(missionId));
+  if (!m) return;
+
+  isEditMode = true;
+  existingMissionSnapshot = JSON.parse(JSON.stringify(m));
+  originalId = m.id;
+
+  pageTitle.textContent = `Edit Mission — ${m.id}`;
+  saveBtn.textContent = "Save / Update";
+
+  editLockHint.style.display = "block";
+
+  id.value = m.id || "";
+
+  // ✅ IMPORTANT: do NOT use variable name "status" (can collide with window.status)
+  // Use the real element reference instead
+  const missionStatusEl = document.getElementById("missionStatus");
+  if (missionStatusEl){
+    missionStatusEl.value = String(m.status || "Scheduled").trim() || "Scheduled";
+    missionStatusEl.disabled = true;
+  }
+
+  date.value = (m.date || "").slice(0,10) || date.value;
+  time.value = m.time || "";
+  vehicle.value = m.vehicle || "";
+  notes.value = m.notes || "";
+
+  id.disabled = true;
+
+  const p = m.details || {};
+  p_fullName.value = p.fullName || "";
+  p_gender.value = p.gender || "";
+
+  p_ageDays.value = p.ageDays || "";
+  p_ageMonths.value = p.ageMonths || "";
+  p_ageYears.value = p.ageYears || "";
+  applyAgeSoftLock();
+
+  p_weightKg.value = p.weightKg || "";
+  p_nationality.value = p.nationality || "";
+  p_hn.value = p.hn || "";
+  p_ward.value = p.ward || "";
+  p_diagnosis.value = p.diagnosis || "";
+  p_purpose.value = p.purpose || "";
+
+  if (m.typeKey && TYPE_BY_KEY[m.typeKey]){
+    const gi = MISSION_MASTER.findIndex(g => g.items.some(it => it.key === m.typeKey));
+    group.value = String(Math.max(0, gi));
+    populateTypeDropdown();
+    typeKey.value = m.typeKey;
+    syncTypeMeta();
+    fillVehicleTypeDropdown(false);
+    if (p.vehicleType) vehicleTypeMain.value = p.vehicleType;
+    buildDetailsFields(m.details || {});
+  } else {
+    fillVehicleTypeDropdown(false);
+    if (p.vehicleType) vehicleTypeMain.value = p.vehicleType;
+    buildDetailsFields(m.details || {});
+  }
+
+  detailsState.fromLat = isEmpty(p.fromLat) ? null : Number(p.fromLat);
+  detailsState.fromLng = isEmpty(p.fromLng) ? null : Number(p.fromLng);
+  detailsState.toLat   = isEmpty(p.toLat)   ? null : Number(p.toLat);
+  detailsState.toLng   = isEmpty(p.toLng)   ? null : Number(p.toLng);
+  detailsState.locationChangeLog = Array.isArray(p.locationChangeLog) ? p.locationChangeLog.slice() : [];
+  setLatLngText();
+
+  lockFilledFieldsForEdit(existingMissionSnapshot);
+}
+
+/* ========= Map pin parsing & logging ========= */
+function parseLatLngFromText(text){
+  const s = String(text || "").trim();
+  const m1 = s.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+  if (m1){
+    const lat = Number(m1[1]), lng = Number(m1[2]);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) return {lat,lng};
+  }
+  const m2 = s.match(/@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
+  if (m2){
+    const lat = Number(m2[1]), lng = Number(m2[2]);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) return {lat,lng};
+  }
+  const m3 = s.match(/[?&](?:q|query)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
+  if (m3){
+    const lat = Number(m3[1]), lng = Number(m3[2]);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) return {lat,lng};
+  }
+  return null;
+}
+
+function pushLocationLog(side, fromLat, fromLng, toLat, toLng, source){
+  if (!Array.isArray(detailsState.locationChangeLog)) detailsState.locationChangeLog = [];
+  detailsState.locationChangeLog.push({
+    side,
+    from: (fromLat!=null && fromLng!=null) ? {lat: fromLat, lng: fromLng} : null,
+    to:   (toLat!=null && toLng!=null) ? {lat: toLat, lng: toLng} : null,
+    source: source || "unknown",
+    at: nowISO()
+  });
+}
+
+function setPin(side, lat, lng, source){
+  lat = Number(lat); lng = Number(lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+  if (side === "from"){
+    const prevLat = detailsState.fromLat, prevLng = detailsState.fromLng;
+    const changed = (prevLat !== lat) || (prevLng !== lng);
+    detailsState.fromLat = lat; detailsState.fromLng = lng;
+    if (changed) pushLocationLog("from", prevLat, prevLng, lat, lng, source);
+  } else {
+    const prevLat = detailsState.toLat, prevLng = detailsState.toLng;
+    const changed = (prevLat !== lat) || (prevLng !== lng);
+    detailsState.toLat = lat; detailsState.toLng = lng;
+    if (changed) pushLocationLog("to", prevLat, prevLng, lat, lng, source);
+  }
+  setLatLngText();
+}
+
+applyPasteFromBtn.addEventListener("click", () => {
+  const p = parseLatLngFromText(pinPaste.value);
+  if (!p) return;
+  setPin("from", p.lat, p.lng, "paste");
+});
+applyPasteToBtn.addEventListener("click", () => {
+  const p = parseLatLngFromText(pinPaste.value);
+  if (!p) return;
+  setPin("to", p.lat, p.lng, "paste");
+});
+clearPinsBtn.addEventListener("click", () => {
+  const prevFromLat = detailsState.fromLat, prevFromLng = detailsState.fromLng;
+  const prevToLat = detailsState.toLat, prevToLng = detailsState.toLng;
+
+  if (prevFromLat!=null || prevFromLng!=null){
+    detailsState.fromLat = null; detailsState.fromLng = null;
+    pushLocationLog("from", prevFromLat, prevFromLng, null, null, "clear");
+  }
+  if (prevToLat!=null || prevToLng!=null){
+    detailsState.toLat = null; detailsState.toLng = null;
+    pushLocationLog("to", prevToLat, prevToLng, null, null, "clear");
+  }
+  setLatLngText();
+});
+
+function openGoogleMapsSearchByPin(lat, lng){
+  if (lat!=null && lng!=null){
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lat + "," + lng)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  } else {
+    window.open("https://www.google.com/maps", "_blank", "noopener,noreferrer");
+  }
+}
+openGMapsFromBtn.addEventListener("click", ()=> openGoogleMapsSearchByPin(detailsState.fromLat, detailsState.fromLng));
+openGMapsToBtn.addEventListener("click", ()=> openGoogleMapsSearchByPin(detailsState.toLat, detailsState.toLng));
+
+openRouteBtn.addEventListener("click", () => {
+  const from = (detailsState.fromLat!=null && detailsState.fromLng!=null) ? `${detailsState.fromLat},${detailsState.fromLng}` : "";
+  const to   = (detailsState.toLat!=null && detailsState.toLng!=null)     ? `${detailsState.toLat},${detailsState.toLng}` : "";
+
+  if (!from && !to){
+    window.open("https://www.google.com/maps", "_blank", "noopener,noreferrer");
+    return;
+  }
+  if (from && !to){
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(from)}`, "_blank", "noopener,noreferrer");
+    return;
+  }
+  if (!from && to){
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(to)}`, "_blank", "noopener,noreferrer");
+    return;
+  }
+  window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(from)}&destination=${encodeURIComponent(to)}&travelmode=driving`, "_blank", "noopener,noreferrer");
+});
+
+/* ========= Leaflet Map Modal ========= */
+let map = null;
+let marker = null;
+let mapSide = "from";
+let pendingLatLng = null;
+
+function ensureMap(){
+  if (map) return;
+
+  map = L.map("map", { zoomControl:true }).setView([13.7563, 100.5018], 11);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap"
+  }).addTo(map);
+
+  marker = L.marker([13.7563, 100.5018], { draggable:true }).addTo(map);
+
+  marker.on("dragend", () => {
+    const ll = marker.getLatLng();
+    pendingLatLng = {lat: ll.lat, lng: ll.lng};
+    pickedLatLng.textContent = `${ll.lat.toFixed(6)},${ll.lng.toFixed(6)}`;
+  });
+
+  const ll = marker.getLatLng();
+  pendingLatLng = {lat: ll.lat, lng: ll.lng};
+  pickedLatLng.textContent = `${ll.lat.toFixed(6)},${ll.lng.toFixed(6)}`;
+}
+
+function openMapModal(side){
+  mapSide = side;
+  mapTitle.textContent = (side === "from") ? "Pick on Map — FROM" : "Pick on Map — TO";
+  mapSub.textContent = "Search แล้วเลือกผลลัพธ์ หรือ ลากหมุดเพื่อความแม่นยำ";
+  mapOverlay.style.display = "flex";
+  ensureMap();
+
+  if (side === "from" && detailsState.fromLat!=null && detailsState.fromLng!=null){
+    map.setView([detailsState.fromLat, detailsState.fromLng], 16);
+    marker.setLatLng([detailsState.fromLat, detailsState.fromLng]);
+  } else if (side === "to" && detailsState.toLat!=null && detailsState.toLng!=null){
+    map.setView([detailsState.toLat, detailsState.toLng], 16);
+    marker.setLatLng([detailsState.toLat, detailsState.toLng]);
+  } else {
+    map.setView([13.7563, 100.5018], 11);
+    marker.setLatLng([13.7563, 100.5018]);
+  }
+
+  const ll = marker.getLatLng();
+  pendingLatLng = {lat: ll.lat, lng: ll.lng};
+  pickedLatLng.textContent = `${ll.lat.toFixed(6)},${ll.lng.toFixed(6)}`;
+
+  setTimeout(()=> map.invalidateSize(), 200);
+}
+
+function closeMapModal(){
+  mapOverlay.style.display = "none";
+  mapResults.style.display = "none";
+  mapResults.innerHTML = "";
+  mapSearch.value = "";
+}
+
+openMapFromBtn.addEventListener("click", ()=> openMapModal("from"));
+openMapToBtn.addEventListener("click", ()=> openMapModal("to"));
+closeMapBtn.addEventListener("click", closeMapModal);
+cancelMapBtn.addEventListener("click", closeMapModal);
+mapOverlay.addEventListener("click", (e)=>{ if (e.target === mapOverlay) closeMapModal(); });
+
+document.addEventListener("keydown", (e)=>{
+  if (e.key === "Escape" && mapOverlay.style.display === "flex"){
+    closeMapModal();
+  }
+});
+
+useCurrentCenterBtn.addEventListener("click", () => {
+  if (!map) return;
+  const c = map.getCenter();
+  marker.setLatLng(c);
+  pendingLatLng = {lat: c.lat, lng: c.lng};
+  pickedLatLng.textContent = `${c.lat.toFixed(6)},${c.lng.toFixed(6)}`;
+});
+
+saveMapBtn.addEventListener("click", () => {
+  if (!pendingLatLng) return;
+  setPin(mapSide, pendingLatLng.lat, pendingLatLng.lng, "map");
+  closeMapModal();
+});
+
+async function nominatimSearch(q){
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=10`;
+  const res = await fetch(url, { headers: { "Accept": "application/json" } });
+  if (!res.ok) return [];
+  return await res.json();
+}
+
+mapSearchBtn.addEventListener("click", async ()=> {
+  const q = mapSearch.value.trim();
+  if (!q) return;
+
+  const items = await nominatimSearch(q);
+  mapResults.innerHTML = "";
+  if (!items.length){
+    mapResults.style.display = "block";
+    mapResults.innerHTML = `<div class="resultItem" style="cursor:default;">No results</div>`;
+    return;
+  }
+
+  mapResults.style.display = "block";
+  items.forEach(it => {
+    const div = document.createElement("div");
+    div.className = "resultItem";
+    div.textContent = it.display_name || "Result";
+    div.addEventListener("click", ()=> {
+      const lat = Number(it.lat), lng = Number(it.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      map.setView([lat, lng], 17);
+      marker.setLatLng([lat, lng]);
+      pendingLatLng = {lat, lng};
+      pickedLatLng.textContent = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+      mapResults.style.display = "none";
+      mapResults.innerHTML = "";
+    });
+    mapResults.appendChild(div);
+  });
+});
+
+/* =======================
+   AGE SOFT-LOCK (days/months/years)
+   - fill 1 => disable the other 2 + clear values
+======================= */
+function _valNum(el){
+  if (!el) return "";
+  const v = String(el.value ?? "").trim();
+  return v;
+}
+function _hasVal(el){
+  const v = _valNum(el);
+  return v !== "" && !Number.isNaN(Number(v));
+}
+function _setDisabled(el, yes){
+  if (!el) return;
+  el.disabled = !!yes;
+  el.style.opacity = ""; // ให้ CSS จัดการหน้าตา
+}
+function applyAgeSoftLock(){
+  // if these elements not found yet, just skip
+  if (!document.getElementById("p_ageDays")) return;
+
+  const hasDays   = _hasVal(p_ageDays);
+  const hasMonths = _hasVal(p_ageMonths);
+  const hasYears  = _hasVal(p_ageYears);
+
+  // Priority = the one that currently has a value
+  if (hasDays){
+    if (_valNum(p_ageMonths) !== "") p_ageMonths.value = "";
+    if (_valNum(p_ageYears)  !== "") p_ageYears.value  = "";
+    _setDisabled(p_ageMonths, true);
+    _setDisabled(p_ageYears,  true);
+    _setDisabled(p_ageDays,   false);
+    return;
+  }
+  if (hasMonths){
+    if (_valNum(p_ageDays) !== "") p_ageDays.value = "";
+    if (_valNum(p_ageYears)!== "") p_ageYears.value = "";
+    _setDisabled(p_ageDays,  true);
+    _setDisabled(p_ageYears, true);
+    _setDisabled(p_ageMonths,false);
+    return;
+  }
+  if (hasYears){
+    if (_valNum(p_ageDays)   !== "") p_ageDays.value   = "";
+    if (_valNum(p_ageMonths) !== "") p_ageMonths.value = "";
+    _setDisabled(p_ageDays,   true);
+    _setDisabled(p_ageMonths, true);
+    _setDisabled(p_ageYears,  false);
+    return;
+  }
+
+  // none filled => enable all
+  _setDisabled(p_ageDays,   false);
+  _setDisabled(p_ageMonths, false);
+  _setDisabled(p_ageYears,  false);
+}
+
+// attach listeners (after DOM has inputs)
+function initAgeSoftLock(){
+  if (!document.getElementById("p_ageDays")) return; // safety
+  p_ageDays.addEventListener("input", applyAgeSoftLock);
+  p_ageMonths.addEventListener("input", applyAgeSoftLock);
+  p_ageYears.addEventListener("input", applyAgeSoftLock);
+  applyAgeSoftLock();
+}
+
+/* ========= FORCE REQUIRE date+time ALWAYS ========= */
+function enforceDateTimeAlwaysRequired(){
+  if (date){
+    date.required = true;
+    if (!date.value) date.value = toISODateLocal(new Date());
+  }
+  if (time){
+    time.required = true;
+  }
+}
+
+// เรียกตอนเริ่มหน้า
+enforceDateTimeAlwaysRequired();
+
+// กัน status เปลี่ยนแล้วไปทำให้ required หลุดจาก logic เก่า (ถ้ามี)
+if (missionStatusEl){
+  missionStatusEl.addEventListener("change", () => {
+    enforceDateTimeAlwaysRequired();
+
+    // ✅ FIX: เปลี่ยน status แล้วต้องอัปเดต required ของ departureFromHospital ทันที
+    // วิธีชัวร์สุด = rebuild details fields (จะคำนวณ required ใหม่ตาม status ปัจจุบัน)
+    buildDetailsFields(existingMissionSnapshot?.details || {});
+  });
+}
+
+/* ========= Submit (FIXED + chosenStatus + ALWAYS required date+time) ========= */
+missionForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  // ✅ บังคับ required ทุกครั้งก่อน validate
+  enforceDateTimeAlwaysRequired();
+
+  // ✅ ให้ browser ฟ้องช่องที่ยังไม่ครบแบบชัดเจน
+  if (!missionForm.checkValidity()){
+    missionForm.reportValidity();
+    return;
+  }
+
+  const selected = TYPE_BY_KEY[typeKey.value];
+  const fields = resolveFields(typeKey.value);
+  const missions = readMissions();
+
+  const existing = (isEditMode && originalId)
+    ? missions.find(x => String(x.id) === String(originalId))
+    : null;
+
+  const oldDetails = (existing && existing.details) ? existing.details : {};
+
+  // ✅ สรุป status: ใช้ค่าจาก dropdown เสมอ (ทั้ง Add และ Edit)
+const chosenStatus = String(missionStatusEl?.value || "").trim()
+  || ((existing && existing.status) ? String(existing.status).trim() : "Scheduled");
+
+  // --- Age normalize (one of days/months/years) ---
+  const ageDays   = p_ageDays.value ? String(p_ageDays.value).trim() : "";
+  const ageMonths = p_ageMonths.value ? String(p_ageMonths.value).trim() : "";
+  const ageYears  = p_ageYears.value ? String(p_ageYears.value).trim() : "";
+
+  let ageUnit = "";
+  let ageValue = "";
+  if (ageDays !== "")        { ageUnit = "days";   ageValue = ageDays; }
+  else if (ageMonths !== "") { ageUnit = "months"; ageValue = ageMonths; }
+  else if (ageYears !== "")  { ageUnit = "years";  ageValue = ageYears; }
+
+  // ✅ attemptedDetails: เอา p_p_diagnosis / p_purpose ออก (ทำให้พังถ้าไม่มีตัวแปรนี้)
+  const attemptedDetails = {
+    fullName: p_fullName.value.trim(),
+    gender: p_gender.value,
+
+    ageDays,
+    ageMonths,
+    ageYears,
+    ageUnit,
+    ageValue,
+
+    weightKg: p_weightKg.value ? String(p_weightKg.value).trim() : "",
+    nationality: p_nationality.value.trim(),
+    hn: p_hn.value.trim(),
+    ward: p_ward.value.trim(),
+    diagnosis: (typeof p_diagnosis !== "undefined" && p_diagnosis) ? p_diagnosis.value.trim() : "",
+    purpose:   (typeof p_purpose   !== "undefined" && p_purpose)   ? p_purpose.value.trim()   : "",
+    vehicleType: String(vehicleTypeMain.value || "").trim()
+  };
+
+  // details fields from dynamic grid
+  fields.forEach(f => {
+    const el = document.getElementById("d_" + f.id);
+    attemptedDetails[f.id] = (el && el.value !== undefined) ? String(el.value).trim() : "";
+  });
+
+  const finalDetails = Object.assign({}, oldDetails);
+
+  if (!Array.isArray(finalDetails.formEditLog))
+    finalDetails.formEditLog = Array.isArray(oldDetails.formEditLog) ? oldDetails.formEditLog.slice() : [];
+
+  if (!Array.isArray(finalDetails.locationChangeLog))
+    finalDetails.locationChangeLog = Array.isArray(oldDetails.locationChangeLog) ? oldDetails.locationChangeLog.slice() : [];
+
+  function addIfEmpty(fieldKey, label, newVal){
+    const oldVal = finalDetails[fieldKey];
+    if (isEmpty(oldVal) && !isEmpty(newVal)){
+      finalDetails[fieldKey] = newVal;
+      finalDetails.formEditLog.push({
+        field: label || fieldKey,
+        addedValue: String(newVal),
+        at: nowISO()
+      });
+    }
+  }
+
+  if (!isEditMode){
+    // Add mode: write everything
+    Object.keys(attemptedDetails).forEach(k => finalDetails[k] = attemptedDetails[k]);
+  } else {
+    // Edit mode (add-only): only fill empty fields
+    addIfEmpty("fullName","Patient: Full Name", attemptedDetails.fullName);
+    addIfEmpty("gender","Patient: Gender", attemptedDetails.gender);
+
+    addIfEmpty("ageDays","Patient: Age (days)", attemptedDetails.ageDays);
+    addIfEmpty("ageMonths","Patient: Age (months)", attemptedDetails.ageMonths);
+    addIfEmpty("ageYears","Patient: Age (years)", attemptedDetails.ageYears);
+    addIfEmpty("ageUnit","Patient: Age unit", attemptedDetails.ageUnit);
+    addIfEmpty("ageValue","Patient: Age value", attemptedDetails.ageValue);
+
+    addIfEmpty("weightKg","Patient: Weight (kg)", attemptedDetails.weightKg);
+    addIfEmpty("nationality","Patient: Nationality", attemptedDetails.nationality);
+    addIfEmpty("hn","Patient: HN", attemptedDetails.hn);
+    addIfEmpty("ward","Patient: Ward", attemptedDetails.ward);
+    addIfEmpty("diagnosis","Patient: Diagnosis", attemptedDetails.diagnosis);
+    addIfEmpty("purpose","Patient: Purpose of Transport", attemptedDetails.purpose);
+    addIfEmpty("vehicleType","Vehicle Type", attemptedDetails.vehicleType);
+
+    fields.forEach(f => addIfEmpty(f.id, `Details: ${f.label}`, attemptedDetails[f.id]));
+  }
+
+  // pins always saved (or cleared)
+  if (detailsState.fromLat!=null && detailsState.fromLng!=null){
+    finalDetails.fromLat = String(detailsState.fromLat);
+    finalDetails.fromLng = String(detailsState.fromLng);
+  } else {
+    finalDetails.fromLat = "";
+    finalDetails.fromLng = "";
+  }
+
+  if (detailsState.toLat!=null && detailsState.toLng!=null){
+    finalDetails.toLat = String(detailsState.toLat);
+    finalDetails.toLng = String(detailsState.toLng);
+  } else {
+    finalDetails.toLat = "";
+    finalDetails.toLng = "";
+  }
+
+  if (Array.isArray(detailsState.locationChangeLog) && detailsState.locationChangeLog.length){
+    finalDetails.locationChangeLog = detailsState.locationChangeLog.slice();
+  }
+
+  // 👇👇👇 ใส่ตรงนี้เลย 👇👇👇
+  // ✅ HARD RULE: Activated ต้องไม่มี scheduled time
+  if (chosenStatus === "Activated"){
+    finalDetails.departureFromHospital = "";
+  }
+
+  // ✅ Build mission
+  const newMissionAttempt = {
+    id: id.value.trim(),
+    date: date.value,
+    time: time.value, // ✅ required แล้ว ไม่ต้อง fallback ""
+    missionGroup: MISSION_MASTER[Number(group.value)]?.group ?? "",
+    typeKey: typeKey.value,
+    type: selected?.label ?? "",
+    typeDisplay: selected?.display ?? "",
+    vehicle: vehicle.value.trim(),
+    status: chosenStatus,
+    notes: notes.value.trim(),
+    details: finalDetails
+  };
+
+  // keep status inside details too (for older viewers)
+  newMissionAttempt.details.status = chosenStatus;
+
+  let finalMission = newMissionAttempt;
+
+  if (isEditMode && existing){
+  finalMission = Object.assign({}, existing);
+  finalMission.id = existing.id;
+
+  // ✅ allow status change from form dropdown
+  finalMission.status = chosenStatus;
+
+  finalMission.details = finalDetails;
+  finalMission.details.status = chosenStatus;
+
+  if (isEmpty(existing.vehicle) && !isEmpty(newMissionAttempt.vehicle)) finalMission.vehicle = newMissionAttempt.vehicle;
+  if (isEmpty(existing.notes) && !isEmpty(newMissionAttempt.notes)) finalMission.notes = newMissionAttempt.notes;
+}
+
+  const list = readMissions();
+  let out = list.slice();
+
+  let action = "save";
+  if (isEditMode){
+    action = "update";
+    const idx = out.findIndex(x => String(x.id) === String(originalId));
+    if (idx >= 0) out[idx] = finalMission;
+    else out.push(finalMission);
+  } else {
+    const idx = out.findIndex(x => String(x.id).toLowerCase() === finalMission.id.toLowerCase());
+    if (idx >= 0) { out[idx] = finalMission; action = "update"; }
+    else out.push(finalMission);
+  }
+
+  writeMissions(out, { action, missionId: finalMission.id });
+  location.href = "index.html";
+});
+
+/* ========= Buttons ========= */
+backBtn.addEventListener("click", () => location.href = "index.html");
+
+resetBtn.addEventListener("click", () => {
+  if (isEditMode){
+    if (confirm("Edit mode: ต้องการกลับไปหน้า index โดยไม่บันทึกใช่ไหม?")) location.href = "index.html";
+    return;
+  }
+  if (!confirm("Clear form ทั้งหมดใช่ไหม?")) return;
+
+  missionForm.reset();
+date.value = toISODateLocal(new Date());
+missionStatusEl.value = "Scheduled";
+
+  isEditMode = false;
+  existingMissionSnapshot = null;
+  originalId = null;
+
+  detailsState.fromLat = null; detailsState.fromLng = null;
+  detailsState.toLat = null; detailsState.toLng = null;
+  detailsState.locationChangeLog = [];
+  setLatLngText();
+
+  initMissionDropdown();
+  fillVehicleTypeDropdown(false);
+  buildDetailsFields({});
+  initAgeSoftLock();
+
+  // ✅ กัน required หลุดหลัง reset
+  enforceDateTimeAlwaysRequired();
+});
+
+/* ========= INIT ========= */
+initMissionDropdown();
+fillVehicleTypeDropdown(false);
+setLatLngText();
+initAgeSoftLock();
+
+// ✅ require ตั้งแต่ตอนเริ่ม
+enforceDateTimeAlwaysRequired();
+
+if (editId){
+  loadForEdit(editId);
+}
+
+</script>
+
+</body>
+</html>

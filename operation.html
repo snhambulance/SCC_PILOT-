@@ -1,0 +1,2750 @@
+<!-- =========================
+OPERATION.HTML (copy + paste) ✅ FINAL — FIXED (no boot-dup / no stray code)
+✅ Guaranteed:
+- Single boot (no duplicated boot blocks)
+- No undefined variables (removed `m` stray line)
+- No `forceRun` / no dangling IIFE
+- Stats + Table always render (safeRender + pageshow)
+- Stamp works (modal On Duty + table Stamp)
+========================= -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Operation</title>
+
+<style>
+  body{
+    margin:0;
+    background:#f4f6f8;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    text-align:center;
+  }
+
+  /* ===== TOPBAR + STATS ===== */
+  .topbar{
+    background:white;
+    box-shadow:0 4px 18px rgba(0,0,0,0.18);
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:8px 14px;
+  }
+  .header{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+  }
+  .header img{
+    width:auto;
+    height:70px;
+    object-fit:contain;
+    display:block;
+  }
+  .stats{
+    display:flex;
+    justify-content:flex-end;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-left:auto;
+  }
+  .stat{
+    background:white;
+    border-radius:12px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.12);
+    padding:8px 14px;
+    min-width:120px;
+    text-align:center;
+  }
+  .stat-year{
+    background:#f3f4f6;
+    box-shadow:0 2px 8px rgba(0,0,0,0.12);
+  }
+  .stat-year span{ color:#006d5b; }
+  .stat-year label{ color:#555; }
+
+  .stat span{
+    display:block;
+    font-size:24px;
+    font-weight:900;
+    color:#006d5b;
+    line-height:1.05;
+  }
+  .stat label{
+    font-size:12px;
+    color:#555;
+  }
+
+  @media (max-width: 900px){
+    .topbar{ flex-wrap:wrap; }
+    .stats{ width:100%; justify-content:center; margin-left:0; }
+    .header img{ height:62px; }
+  }
+
+  .content{
+    padding:18px 16px 34px;
+    max-width:1620px;
+    margin:0 auto;
+    text-align:left;
+  }
+  h1{
+    font-size:22px;
+    font-weight:900;
+    margin:10px 0 8px;
+    text-align:center;
+  }
+  #clock{
+    font-size:44px;
+    font-weight:900;
+    margin:8px 0 16px;
+    text-align:center;
+  }
+
+  .actionbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    margin:10px 0 14px;
+  }
+  .muted{ color:#6b7280; }
+
+  .btn{
+    appearance:none;
+    border:0;
+    border-radius:12px;
+    padding:10px 14px;
+    font-weight:900;
+    cursor:pointer;
+    background:#0b6b5b;
+    color:white;
+    box-shadow:0 3px 10px rgba(0,0,0,0.12);
+  }
+  .btn.secondary{ background:#111827; }
+  .btn.light{
+    background:#e5e7eb;
+    color:#111827;
+    box-shadow:none;
+    font-weight:900;
+  }
+  .btn.tiny{
+    padding:7px 10px;
+    border-radius:10px;
+    font-weight:900;
+    font-size:12px;
+    box-shadow:none;
+  }
+  .btn.danger{ background:#b42318; }
+
+  /* Pill buttons */
+  .btn.pill{
+    padding:6px 10px;
+    border-radius:999px;
+    font-weight:900;
+    font-size:12px;
+    line-height:1;
+    box-shadow:none;
+    border:1px solid transparent;
+  }
+  .btn.onDuty{
+    background:#0b6b5b;
+    color:#ffffff;
+    border-color:#0b6b5b;
+  }
+  .btn.timeDone{
+    background:#111827;
+    color:#ffffff;
+    border-color:#111827;
+  }
+
+  .card{
+    background:#fff;
+    border-radius:18px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.12);
+    padding:16px;
+  }
+  .cardHeader{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:12px;
+  }
+  .cardTitle{
+    font-size:16px;
+    font-weight:900;
+    color:#1f2937;
+    margin:0;
+  }
+  .controls{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:flex-end;
+  }
+  .input, .select{
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:10px 12px;
+    font-size:14px;
+    outline:none;
+    background:#fff;
+  }
+  
+  .field{
+  display:flex;
+  flex-direction:column;
+}
+
+
+  .tableWrap{
+    overflow:auto;
+    border-radius:14px;
+    border:1px solid #eef2f7;
+  }
+  table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    min-width:1600px;
+    font-size:14px;
+  }
+  thead th{
+    position:sticky;
+    top:0;
+    background:#f8fafc;
+    color:#374151;
+    text-align:left;
+    padding:12px 12px;
+    border-bottom:1px solid #e5e7eb;
+    z-index:1;
+    white-space:nowrap;
+  }
+  tbody td{
+    padding:12px 12px;
+    border-bottom:1px solid #f0f2f5;
+    color:#111827;
+    vertical-align:top;
+  }
+  tbody tr:hover{ background:#fafcff; }
+
+  /* ===== STATUS BADGES ===== */
+  .badge{
+    display:inline-block;
+    padding:6px 10px;
+    border-radius:999px;
+    font-weight:900;
+    font-size:12px;
+    border:1px solid transparent;
+    white-space:nowrap;
+  }
+  /* Scheduled = ม่วง */
+.b-scheduled{ background:#f3e8ff; color:#6b21a8; border-color:#d8b4fe; }
+/* Preparing = ฟ้า */
+.b-preparing{ background:#e0f2fe; color:#075985; border-color:#bae6fd; }
+/* Delayed = แดง */
+.b-delayed{ background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+/* Transporting = เขียว */
+.b-transporting{ background:#dcfce7; color:#166534; border-color:#86efac; }
+/* Returning = ส้ม */
+.b-returning{ background:#ffedd5; color:#9a3412; border-color:#fed7aa; }
+/* Completed = เทาอ่อน */
+.b-completed{ background:#f1f5f9; color:#334155; border-color:#d7dee8; }
+/* Cancelled = เทาเข้ม */
+.b-cancelled{ background:#e5e7eb; color:#111827; border-color:#9ca3af; }
+/* Pending / Unknown */
+.b-pending{ background:#f3f4f6; color:#374151; border-color:#e5e7eb; }
+/* Activated = เขียวอมฟ้า (teal) */
+.b-activated{ background:#d1fae5; color:#065f46; border-color:#6ee7b7; }
+
+/* Aborted = ชมพูแดง (แยกจาก Cancelled) */
+.b-aborted{ background:#ffe4e6; color:#9f1239; border-color:#fecdd3; }
+
+
+  .tinyNote{ font-size:12px; color:#6b7280; margin:10px 2px 0; }
+
+  /* ===== MODAL ===== */
+  .modalOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(17,24,39,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    z-index:9999;
+  }
+  .modal{
+    width:min(980px, 100%);
+    background:white;
+    border-radius:18px;
+    box-shadow:0 18px 50px rgba(0,0,0,0.28);
+    overflow:hidden;
+    text-align:left;
+  }
+  .modalHeader{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 16px;
+    background:#f8fafc;
+    border-bottom:1px solid #e5e7eb;
+  }
+  .modalTitle{
+    margin:0;
+    font-size:18px;
+    font-weight:900;
+    color:#111827;
+  }
+  .modalSub{
+    margin:4px 0 0;
+    font-size:12px;
+    color:#6b7280;
+  }
+  .modalBody{
+    padding:16px;
+    max-height:70vh;
+    overflow:auto;
+  }
+  .section{
+    border:1px solid #eef2f7;
+    border-radius:14px;
+    padding:12px;
+    margin-bottom:12px;
+    background:#fff;
+  }
+  .section h3{
+    margin:0 0 8px;
+    font-size:14px;
+    font-weight:900;
+    color:#111827;
+  }
+  .kv{
+    display:grid;
+    grid-template-columns: 220px 1fr;
+    gap:8px 12px;
+    font-size:13px;
+  }
+  .k{ color:#374151; font-weight:800; }
+  .v{ color:#111827; }
+
+  .modalFooter{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 16px;
+    border-top:1px solid #e5e7eb;
+    background:#fff;
+    flex-wrap:wrap;
+  }
+  .footerLeft{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:flex-start;
+  }
+  .footerRight{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    margin-left:auto;
+  }
+
+  /* ===== STAMP PANEL ===== */
+  .stampOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(17,24,39,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    z-index:10000;
+  }
+  .stampModal{
+    width:min(880px, 100%);
+    background:white;
+    border-radius:18px;
+    box-shadow:0 18px 50px rgba(0,0,0,0.28);
+    overflow:hidden;
+    text-align:left;
+  }
+  .stampHeader{
+    padding:14px 16px;
+    background:#f8fafc;
+    border-bottom:1px solid #e5e7eb;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .stampTitle{
+    margin:0;
+    font-size:16px;
+    font-weight:1000;
+    color:#111827;
+  }
+  .stampBody{
+    padding:16px;
+    max-height:70vh;
+    overflow:auto;
+  }
+  .stampGrid{
+    display:grid;
+    grid-template-columns: 1fr;
+    gap:10px;
+  }
+  .stampRow{
+    border:1px solid #eef2f7;
+    border-radius:14px;
+    padding:10px 12px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+    background:#fff;
+  }
+  .stampLeft{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .stampKey{
+    font-weight:1000;
+    font-size:13px;
+    color:#111827;
+  }
+  .stampActions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .whoRow{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:10px;
+  }
+  .whoRow input{
+    flex:1;
+    min-width:220px;
+  }
+  .stampFooter{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 16px;
+    border-top:1px solid #e5e7eb;
+    background:#fff;
+    flex-wrap:wrap;
+  }
+
+  @media (max-width: 900px){
+    .stats{ width:100%; justify-content:center; margin-left:0; }
+    .header img{ height:58px; }
+    #clock{ font-size:38px; }
+    .kv{ grid-template-columns: 1fr; }
+  }
+
+  /* ===== CANCEL DIALOG ===== */
+  .cancelOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(17,24,39,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    z-index:10001;
+  }
+  .cancelModal{
+    width:min(680px, 100%);
+    background:#fff;
+    border-radius:18px;
+    box-shadow:0 18px 50px rgba(0,0,0,0.28);
+    overflow:hidden;
+    text-align:left;
+  }
+  .cancelHeader{
+    padding:14px 16px;
+    background:#f8fafc;
+    border-bottom:1px solid #e5e7eb;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .cancelTitle{
+    margin:0;
+    font-size:16px;
+    font-weight:1000;
+    color:#111827;
+  }
+  .cancelBody{ padding:16px; }
+  .cancelGroup{
+    border:1px solid #eef2f7;
+    border-radius:14px;
+    padding:12px;
+    background:#fff;
+  }
+  .cancelOption{
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    padding:10px 8px;
+    border-radius:12px;
+  }
+  .cancelOption:hover{ background:#fafcff; }
+  .cancelOption label{
+    font-weight:900;
+    color:#111827;
+    cursor:pointer;
+  }
+  .cancelHint{
+    font-size:12px;
+    color:#6b7280;
+    margin-top:2px;
+  }
+  .cancelFooter{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:flex-end;
+    padding:12px 16px;
+    border-top:1px solid #e5e7eb;
+    background:#fff;
+  }
+  .textarea{
+    width:100%;
+    min-height:90px;
+    resize:vertical;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:10px 12px;
+    font-size:14px;
+    outline:none;
+  }
+
+  /* ===== Status Icons ===== */
+.statusCell{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.statusIcons{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+}
+.statusIcons svg{
+  width:22px !important;
+  height:22px !important;
+  stroke-width:2.4;
+  color:currentColor;
+}
+
+  /* ===== Group Toggle Bar (keep button on same line) ===== */
+.groupToggleBar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:nowrap;           /* ✅ ห้ามตกบรรทัด */
+}
+.groupToggleLeft{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  flex:1 1 auto;
+}
+.groupToggleLeft span:first-child{
+  white-space:nowrap;         /* ✅ หัวข้อไม่แตกบรรทัด */
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.groupToggleCount{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:28px;
+  height:22px;
+  padding:0 8px;
+  border-radius:999px;
+  background:#e5e7eb;
+  font-weight:900;
+  font-size:12px;
+}
+.group-toggle .btn{
+  flex:0 0 auto;
+  white-space:nowrap;         /* ✅ ปุ่ม Hide/Show ไม่แตกบรรทัด */
+}
+
+/* ===== Status Icons (color driven by CSS) ===== */
+.statusIcons svg{
+  width:22px !important;
+  height:22px !important;
+  stroke-width:2.4;
+  color:currentColor; /* optional */
+}
+
+/* สีของ icon แต่ละสถานะ */
+.statusIcons.preparing{ color:#075985; }     /* ฟ้า */
+.statusIcons.delayed{ color:#991b1b; }       /* แดง */
+.statusIcons.transporting{ color:#166534; }  /* เขียว */
+.statusIcons.returning{ color:#9a3412; }     /* ส้ม */
+
+/* ===== STAMP FOOTER ACTIONS (buttons layout) ===== */
+.stampFooterActions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  align-items:center;
+  margin-left:auto;
+}
+
+/* Save & Exit = normal / safe action */
+#saveExitBtn{
+  border:1px solid #d1d5db;
+}
+
+/* Mark Completed = final & important */
+#markCompletedBtn{
+  min-width:160px;
+}
+
+@media (max-width: 520px){
+  .stampFooterActions{
+    width:100%;
+  }
+  .stampFooterActions .btn{
+    flex:1;
+    width:100%;
+  }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+  <div class="header">
+    <img src="header-logo.png" alt="Header Logo">
+  </div>
+
+  <div class="stats">
+    <div class="stat stat-year"><span id="total">-</span><label>Total (Year)</label></div>
+    <div class="stat"><span id="todayTotal">-</span><label>Total (Selected Date)</label></div>
+    <div class="stat"><span id="activeToday">-</span><label>Active</label></div>
+    <div class="stat"><span id="remainingScheduled">-</span><label>Remaining Scheduled</label></div>
+    <div class="stat"><span id="completedN">-</span><label>Completed</label></div>
+    <div class="stat"><span id="cancelledN">-</span><label>Cancelled</label></div>
+  </div>
+</div>
+
+
+<div class="content">
+  <h1>Operation</h1>
+  <div id="clock">--:--:--</div>
+  
+
+  <div class="actionbar">
+    <div class="muted">Read-only dashboard • กด “On Duty” เพื่อ stamp เวลา</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;"></div>
+  </div>
+
+  <div class="card">
+    <div class="cardHeader">
+      <h2 class="cardTitle" id="tableTitle">Missions</h2>
+
+      <div class="controls">
+        <input id="search" class="input" placeholder="Search: ID / type / from / to / notes">
+        <select id="statusFilter" class="select">
+          <option value="ALL">All status</option>
+          <option value="Scheduled">Scheduled</option>
+          <option value="Preparing">Preparing</option>
+          <option value="Delayed">Delayed</option>
+          <option value="Transporting">Transporting</option>
+          <option value="Returning">Returning</option>
+          <option value="Completed">Completed</option>
+          <option value="Cancelled">Cancelled</option>
+          <option value="Pending">Pending</option>
+        </select>
+        <input id="dateFilter" class="input" type="date">
+      </div>
+    </div>
+
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:140px;">Mission ID</th>
+            <th style="width:120px;">Date</th>
+            <th style="width:120px;">Departure</th>
+            <th style="width:220px;">Mission Type</th>
+            <th style="width:300px;">From</th>
+            <th style="width:300px;">To</th>
+            <th style="width:160px;">Status</th>
+            <th style="width:260px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="missionBody">
+          <tr><td colspan="8" class="muted">No data yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tinyNote" id="countNote"></div>
+  </div>
+</div>
+
+<!-- DETAILS MODAL -->
+<div class="modalOverlay" id="modalOverlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modalHeader">
+      <div>
+        <h2 class="modalTitle" id="modalTitle">Mission Details</h2>
+        <div class="modalSub" id="modalSub"></div>
+      </div>
+    </div>
+
+    <div class="modalBody" id="modalBody"></div>
+
+    <div class="modalFooter">
+      <div class="footerLeft">
+        <button class="btn pill onDuty" id="openStampBtn" type="button"
+    onclick="if(currentMissionId) openStamp(currentMissionId)">
+    On Duty
+  </button>
+        <button class="btn danger" id="cancelMissionBtn" type="button"
+    onclick="openCancelDialog()">
+    Cancel mission
+  </button>
+  <button class="btn light" id="closeModalBtn" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STAMP PANEL -->
+<div class="stampOverlay" id="stampOverlay" role="dialog" aria-modal="true">
+  <div class="stampModal">
+    <div class="stampHeader">
+      <div>
+        <h3 class="stampTitle" id="stampTitle">Stamp</h3>
+        <div class="modalSub" id="stampSub"></div>
+      </div>
+      <button class="btn light tiny" id="closeStampBtn" type="button">Close</button>
+    </div>
+
+    <div class="stampBody">
+      <div class="muted" style="font-size:12px; margin-bottom:10px;">
+        * กดปุ่มแต่ละขั้นเพื่อ stamp เวลา (ระบบใช้เวลาปัจจุบันของ device) • เก็บเป็น ISO-8601 เท่านั้น
+      </div>
+
+      <div class="whoRow">
+        <input id="stampBy" class="input" placeholder="ผู้ปฏิบัติงาน (เช่น EMT A / RN B / Dr C) *">
+        <input id="stampNote" class="input" placeholder="Note (optional) เช่น delay/traffic/hand-off issue">
+      </div>
+
+      <div class="stampGrid" id="stampGrid" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="stampFooter">
+      <div class="muted" style="font-size:12px;" id="stampFooterInfo">
+        Stamp progress will be saved. You can return later to continue.
+      </div>
+
+      <div class="stampFooterActions">
+        <button class="btn danger tiny" id="clearStampsBtn" type="button">Clear Stamp</button>
+        <button class="btn" id="markCompletedBtn" type="button">Mark Completed</button>
+        <button class="btn secondary" id="saveExitBtn" type="button">Save & Exit</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CANCEL OVERLAY (operation_line style) -->
+<div class="cancelOverlay" id="cancelOverlay" role="dialog" aria-modal="true">
+  <div class="cancelModal">
+    <div class="cancelHeader">
+      <div>
+        <h3 class="cancelTitle" id="cancelTitle">Cancel mission</h3>
+        <div class="modalSub" id="cancelSub">-</div>
+      </div>
+      <button class="btn light tiny" id="closeCancelBtn" type="button">Close</button>
+    </div>
+
+    <div class="cancelBody">
+      <div class="cancelGroup">
+
+        <!-- ✅ Cancelled by -->
+        <div class="field" style="gap:8px; margin-bottom:10px;">
+          <div class="muted" style="font-size:12px; margin-bottom:6px;">Cancelled by (required)</div>
+          <input class="input" id="cancelBy" type="text"
+                 placeholder="e.g., Nurse A / Dr. B / CC คุณซี" required>
+        </div>
+
+        <!-- ✅ Radio reasons -->
+        <div class="muted" style="font-size:12px; margin-bottom:10px;">
+          กรุณาเลือกเหตุผลการยกเลิก (บังคับ)
+        </div>
+
+        <label class="cancelOption" style="display:flex; gap:10px; align-items:flex-start; cursor:pointer; margin-bottom:10px;">
+          <input type="radio" name="cancelReason" value="MISSED" style="margin-top:3px;">
+          <div>
+            <div style="font-weight:900;">Missed mission</div>
+            <div class="cancelHint" style="font-size:12px; color:#6b7280;">ยกเลิกก่อนออกเดินทาง</div>
+          </div>
+        </label>
+
+        <label class="cancelOption" style="display:flex; gap:10px; align-items:flex-start; cursor:pointer; margin-bottom:10px;">
+          <input type="radio" name="cancelReason" value="ABORTED" style="margin-top:3px;">
+          <div>
+            <div style="font-weight:900;">Aborted mission</div>
+            <div class="cancelHint" style="font-size:12px; color:#6b7280;">ออกเดินทางแล้ว และถูกยกเลิก</div>
+          </div>
+        </label>
+
+        <label class="cancelOption" style="display:flex; gap:10px; align-items:flex-start; cursor:pointer;">
+          <input type="radio" name="cancelReason" value="INCORRECT" style="margin-top:3px;">
+          <div>
+            <div style="font-weight:900;">Incorrect information</div>
+            <div class="cancelHint" style="font-size:12px; color:#6b7280;">ข้อมูลผิดพลาด</div>
+          </div>
+        </label>
+
+        <div class="muted" style="font-size:12px; margin-top:10px;">
+          * เลือก 1 ตัวเลือก แล้วกด Confirm<br>
+          * ระบบจะตั้งสถานะเป็น Cancelled
+        </div>
+
+      </div>
+    </div>
+
+    <div class="cancelFooter" style="padding:14px 16px; border-top:1px solid #e5e7eb; display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; background:#fff;">
+      <button class="btn light" id="cancelCancelBtn" type="button">Close</button>
+      <button class="btn danger" id="confirmCancelBtn" type="button">Confirm Cancellation</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+/* =========================================================
+   ERROR BOX (เห็น error บนจอทันที)
+========================================================= */
+(function(){
+  function showErr(msg){
+    let box = document.getElementById("__errbox");
+    if (!box){
+      box = document.createElement("div");
+      box.id="__errbox";
+      box.style.cssText =
+        "position:fixed;left:10px;right:10px;bottom:10px;z-index:999999;" +
+        "background:#111827;color:#fff;padding:10px 12px;border-radius:12px;" +
+        "font:12px/1.3 system-ui;box-shadow:0 10px 30px rgba(0,0,0,.35);" +
+        "max-height:35vh;overflow:auto;text-align:left;white-space:pre-wrap;";
+      document.body.appendChild(box);
+    }
+    box.textContent = msg + "\n\n" + box.textContent;
+  }
+  window.addEventListener("error", (e)=> showErr(
+    "JS Error: " + (e?.message||e) + "\n@ " + (e?.filename||"") + ":" + (e?.lineno||"") + ":" + (e?.colno||"")
+  ));
+  window.addEventListener("unhandledrejection", (e)=> showErr(
+    "Promise Rejection: " + (e?.reason?.message || e?.reason || e)
+  ));
+})();
+
+/* =========================================================
+   STORAGE / BASIC HELPERS
+========================================================= */
+const STORAGE_KEY = "SCC_MISSIONS_V1";
+const SYNC_CHANNEL_NAME = "SCC_SYNC_V1";
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+function toISODateLocal(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function getTodayISO(){ return toISODateLocal(new Date()); }
+function nowISO(){ return new Date().toISOString(); }
+
+function escapeHtml(s){
+  return String(s ?? "").replace(/[&<>"']/g, m => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[m]));
+}
+
+function readMissions(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch{ return []; }
+}
+
+function emitSync(eventName, payload = {}){
+  try{
+    if ("BroadcastChannel" in window){
+      const ch = new BroadcastChannel(SYNC_CHANNEL_NAME);
+      ch.postMessage({ eventName, payload, at: Date.now() });
+      ch.close?.();
+    }
+  }catch{}
+  try{
+    localStorage.setItem("__SCC_SYNC_PING__", JSON.stringify({ eventName, payload, at: Date.now() }));
+  }catch{}
+}
+
+function writeMissions(arr){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  emitSync("MISSIONS_UPDATED", {});
+}
+
+/* Robust mission date getter (หลาย field) */
+function getMissionDateISO(m){
+  const candidates = [
+    m?.date, m?.dateISO, m?.missionDate,
+    m?.details?.date, m?.details?.dateISO, m?.details?.missionDate, m?.details?.missionDateISO
+  ];
+  for (const v of candidates){
+    const s = String(v ?? "").trim();
+    if (s && /^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  }
+  return "";
+}
+
+function normStatus(s){
+  const x = String(s ?? "").trim();
+  return x || "Scheduled";
+}
+function badgeClassFromStatus(s){
+  const x = normStatus(s).toLowerCase();
+  if (x === "scheduled") return "b-scheduled";
+  if (x === "preparing") return "b-preparing";
+  if (x === "delayed") return "b-delayed";
+  if (x === "transporting") return "b-transporting";
+  if (x === "returning") return "b-returning";
+  if (x === "completed") return "b-completed";
+  if (x === "cancelled") return "b-cancelled";
+  return "b-pending";
+}
+
+function isoToISODate(iso){
+  if(!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
+
+function getStepISO(m, stepKey){
+  const op = m?.details?.OperationStamp;
+  if (!op || !Array.isArray(op.steps)) return "";
+  const s = op.steps.find(x => String(x.key) === String(stepKey));
+  return s?.tsISO || "";
+}
+
+function getCancelISO(m){
+  return m?.details?.cancel?.cancelledAtISO || "";
+}
+
+/* =========================================================
+   STATUS HELPERS (SINGLE SOURCE OF TRUTH) ✅
+========================================================= */
+function getRawStatus(m){
+  return (m && (m.status ?? m.details?.status)) ?? "";
+}
+
+function getStatus(m){
+  return normStatus(getRawStatus(m));
+}
+
+/* ✅ เวลา set status: เขียนทั้ง m.status และ m.details.status กันข้อมูลเก่าปน */
+function setStatus(m, newStatus){
+  if (!m) return;
+  const s = normStatus(newStatus);
+  m.status = s;
+  m.details = m.details || {};
+  m.details.status = s;
+}
+function setStatusWithLog(m, newStatus, by, source, note){
+  if (!m) return;
+
+  const prev = getStatus(m);
+  const next = normStatus(newStatus);
+
+  // set status (เขียนทั้ง 2 ที่ให้ชัวร์)
+  setStatus(m, next);
+
+  // status log
+  m.details = m.details || {};
+  if (!Array.isArray(m.details.statusLog)) m.details.statusLog = [];
+
+  // log เฉพาะตอนเปลี่ยนจริง
+  if (normStatus(prev) !== normStatus(next)){
+    m.details.statusLog.push({
+      atISO: nowISO(),
+      from: prev,
+      to: next,
+      by: String(by || "Unknown"),
+      source: String(source || ""),
+      note: String(note || "")
+    });
+  }
+}
+
+function isCancelled(m){
+  return getStatus(m) === "Cancelled";
+}
+function isActivated(m){
+  return getStatus(m) === "Activated";
+}
+
+
+/* =========================================================
+   WORKLOAD DATE + GROUPING
+========================================================= */
+function daysDiffISO(fromISODate, toISODate){
+  const a = new Date(fromISODate + "T00:00:00");
+  const b = new Date(toISODate + "T00:00:00");
+  return Math.round((b - a) / (24*60*60*1000));
+}
+
+// วันนี้ view: เอา today + backlog ด้วยกติกา workload
+function getWorkloadDateISO(m, todayISO){
+  const status = getStatus(m);
+
+
+  if (status === "Cancelled"){
+    const cISO = getCancelISO(m);
+    return cISO ? String(cISO).slice(0,10) : (getMissionDateISO(m) || todayISO);
+  }
+
+  const adISO = getStepISO(m, "actual_departure");
+  if (adISO) return String(adISO).slice(0,10);
+
+  const req = getMissionDateISO(m);
+  if (req && req > todayISO) return req;
+
+  return todayISO;
+}
+
+function isCarryOver(m, selectedDateISO){
+  const req = getMissionDateISO(m);
+  const wl  = getWorkloadDateISO(m, selectedDateISO);
+  const started = !!getStepISO(m, "actual_departure");
+  const cancelled = (normStatus(m?.status) === "Cancelled");
+  return (!started && !cancelled && wl === selectedDateISO && req && req < selectedDateISO);
+}
+
+function carryOverLabel(m, selectedDateISO){
+  const req = getMissionDateISO(m);
+  if (!req) return "";
+  const dd = daysDiffISO(req, selectedDateISO);
+  if (dd <= 0) return "";
+  return `Carry-over +${dd}d (from ${req})`;
+}
+
+/* =========================================================
+   COLLAPSE (SINGLE) ✅
+========================================================= */
+function _collapseKey(name){
+  return "SCC_COLLAPSE_" + String(name||"").toUpperCase();
+}
+function isCollapsed(name){
+  return localStorage.getItem(_collapseKey(name)) === "1";
+}
+function setCollapsed(name, v){
+  localStorage.setItem(_collapseKey(name), v ? "1" : "0");
+}
+function toggleGroup(name){
+  setCollapsed(name, !isCollapsed(name));
+  safeRender(); // ✅ operation.html ใช้ safeRender ตลอด
+}
+
+function dividerRow(){
+  return `<tr class="group-divider"><td colspan="8"></td></tr>`;
+}
+function groupHeaderRow(kind, count){
+  const collapsed = isCollapsed(kind);
+
+  let title = "Done";
+if (kind === "completed") title = "Completed";
+else if (kind === "done") title = "Completed + Cancelled";
+
+
+  const btnText = collapsed ? "Show" : "Hide";
+
+  return `
+    <tr class="group-toggle">
+      <td colspan="8">
+        <div class="groupToggleBar">
+          <div class="groupToggleLeft">
+            <span ${kind === "done" ? 'style="font-weight:900;"' : ""}>
+  ${escapeHtml(title)}
+</span>
+
+            <span class="groupToggleCount">${count}</span>
+          </div>
+          <button class="btn light tiny" type="button" onclick="toggleGroup('${escapeHtml(kind)}')">${escapeHtml(btnText)}</button>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+/* =========================================================
+   SORT HELPERS (SINGLE) ✅
+========================================================= */
+function _depStr(m){
+  const d = m.details || {};
+  return d.departureFromHospital || d.departureOriginal || "";
+}
+function _depMinutesOfDay(m){
+  const dep = _depStr(m);
+  if (!dep || !String(dep).includes(":")) return 999999;
+  const [h, mi] = String(dep).split(":").map(n => parseInt(n, 10));
+  if (!Number.isFinite(h) || !Number.isFinite(mi)) return 999999;
+  return (h * 60) + mi;
+}
+function _tierRank(status){
+  const s = normStatus(status);
+  if (s === "Completed") return 1;
+  if (s === "Cancelled") return 2;
+  return 0;
+}
+function _activeBlockRank(status){
+  const s = normStatus(status);
+  if (s === "Delayed") return 0;
+  if (s === "Preparing") return 1;
+  if (s === "Transporting") return 2;
+  if (s === "Returning") return 3;
+  if (s === "Scheduled") return 4;
+  return 4;
+}
+
+/* =========================================================
+   TYPE LABEL (display only)
+========================================================= */
+const TYPE_DISPLAY_LABELS = {
+  "EMS_BASIC": "Basic EMS",
+  "EMS_ADV": "Advance EMS",
+  "IFT_BASIC_IN": "Basic IFT – Refer In",
+  "IFT_ADV_IN": "Advance IFT – Refer In",
+  "IFT_BASIC_OUT": "Basic IFT – Refer Out",
+  "IFT_ADV_OUT": "Advance IFT – Refer Out",
+  "AP_CLINIC_IFT": "Airport Clinic IFT (รับผู้ป่วยจากคลินิกสนามบิน)",
+  "AP_ESCORT_IN": "(IN)Airport escort and transport (รับ-คนไข้นอกเครื่อง)",
+  "AP_ESCORT_OUT": "(OUT)Airport escort and transport (ส่ง-คนไข้นอกเครื่อง)",
+  "TARMAC_IN": "TARMAC_IN : Airport escort and transport (รับ-คนไข้ข้างเครื่อง)",
+  "TARMAC_OUT": "TARMAC_OUT : Airport escort and transport (ส่ง-คนไข้ข้างเครื่อง)",
+  "PROC_SEND_WAIT_PICK": "Transport for procedural appointment (ส่งและรอรับ-คนไข้ไปทำหัตถการ)",
+  "PROC_SEND": "(SEND)Transport procedural appointment (ส่ง-คนไข้ไปทำหัตถการ)",
+  "PROC_PICK": "(PICK)Transport procedural appointment (รับ-คนไข้จากการไปทำหัตถการ)",
+  "HOME_PICKUP": "Home pickup (รับ-คนไข้จากบ้าน)",
+  "HOME_DISCH": "Discharge home (ส่ง-คนไข้กลับบ้าน)",
+  "HHC": "Home Health Care",
+  "HHC_PICKUP": "Home Health Care",
+  "HHC_SEND": "Home Health Care",
+  "OTHER": "Other เขียนหมายเหตุเพิ่มได้"
+};
+function getTypeLabelForTable(m){
+  const k = String(m?.typeKey || "").trim();
+  return TYPE_DISPLAY_LABELS[k] || (m?.typeDisplay || m?.type || "-");
+}
+
+/* =========================================================
+   FROM/TO MAPPING
+========================================================= */
+function getFromTo(m){
+  const d = m.details || {};
+  const k = m.typeKey || "";
+
+  if (["IFT_BASIC_IN","IFT_ADV_IN","IFT_BASIC_OUT","IFT_ADV_OUT"].includes(k)){
+    return { from: d.referringHospital || "-", to: d.receivingHospital || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+  }
+  if (k === "AP_CLINIC_IFT"){
+    return { from: d.pickupPoint || "-", to: d.receivingHospital || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+  }
+  if (["AP_ESCORT_IN","TARMAC_IN"].includes(k)){
+    return { from: d.pickupPoint || "-", to: d.destinationHospital || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+  }
+  if (["AP_ESCORT_OUT","TARMAC_OUT"].includes(k)){
+    return { from: d.sendingHospital || "-", to: d.dropoffPoint || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+  }
+  if (["PROC_SEND_WAIT_PICK","PROC_SEND"].includes(k)){
+    return { from: d.originHospital || "-", to: d.procedureFacility || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+  }
+  if (k === "PROC_PICK"){
+    return { from: d.procedureFacility || "-", to: d.returnHospital || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+  }
+  if (["HOME_PICKUP","HOME_DISCH","HHC","HHC_PICKUP","HHC_SEND","OTHER","EMS_BASIC","EMS_ADV"].includes(k)){
+    return { from: d.origin || "-", to: d.destination || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+  }
+  return { from: "-", to: "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+}
+
+/* =========================================================
+   ROUTE (current location -> From/To)
+========================================================= */
+function _cleanText(s){ return String(s || "").trim(); }
+function _getPin(m, side){
+  const d = (m && m.details) ? m.details : {};
+  const lat = side === "from" ? d.fromLat : d.toLat;
+  const lng = side === "from" ? d.fromLng : d.toLng;
+  const la = Number(lat), lo = Number(lng);
+  if (Number.isFinite(la) && Number.isFinite(lo)) return `${la},${lo}`;
+  return null;
+}
+function _getDestinationText(m, side){
+  const pin = _getPin(m, side);
+  if (pin) return pin;
+  const ft = getFromTo(m);
+  const place  = side === "from" ? _cleanText(ft.from) : _cleanText(ft.to);
+  const detail = side === "from" ? _cleanText(ft.fromDetail) : _cleanText(ft.toDetail);
+  const combined = [place, detail].filter(Boolean).join(" ");
+  return combined || null;
+}
+function openRouteTo(side){
+  const m = window.__detailMission;
+  if (!m) return;
+  const dest = _getDestinationText(m, side);
+  const url = dest
+    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`
+    : "https://www.google.com/maps";
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+/* =========================================================
+   AUTO STATUS (Scheduled/Preparing/Delayed only)
+========================================================= */
+function toLocalDateTime(dateISO, timeHHMM){
+  if(!dateISO || !timeHHMM) return null;
+  const [h,m] = String(timeHHMM).split(":").map(Number);
+  const d = new Date(dateISO + "T00:00:00");
+  d.setHours(h||0, m||0, 0, 0);
+  return d;
+}
+function autoUpdatePreparingDelayed(missions){
+  let changed = false;
+  const now = new Date();
+
+  missions.forEach(m => {
+    const cur = normStatus(m.status);
+    if (!["Scheduled","Preparing","Delayed"].includes(cur)) return;
+
+    const d = m.details || {};
+    const dep = d.departureFromHospital;
+    const dateISO = getMissionDateISO(m);
+    if (!dep || !dateISO) return;
+
+    const depDT = toLocalDateTime(dateISO, dep);
+    if (!depDT) return;
+
+    const diffMin = (depDT - now) / 60000;
+
+    if (cur === "Scheduled" && diffMin <= 30 && diffMin > 0){
+  setStatus(m, "Preparing"); changed = true; return;
+}
+if ((cur === "Scheduled" || cur === "Preparing") && diffMin <= 0){
+  setStatus(m, "Delayed"); changed = true; return;
+}
+if (cur === "Delayed" && diffMin > 0){
+  setStatus(m, "Preparing"); changed = true; return;
+}
+
+  });
+
+  return changed;
+}
+
+/* =========================================================
+   STATUS ICONS
+========================================================= */
+const ICON_PREPARING_1 = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 6v6l4 2"/><path d="M22 12a10 10 0 1 0-11 9.95"/><path d="m22 16-5.5 5.5L14 19"/>
+</svg>`;
+
+const ICON_TRANSPORTING_1 = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M10 10H6"/><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
+  <path d="M19 18h2a1 1 0 0 0 1-1v-3.28a1 1 0 0 0-.684-.948l-1.923-.641a1 1 0 0 1-.578-.502l-1.539-3.076A1 1 0 0 0 16.382 8H14"/>
+  <path d="M8 8v4"/><path d="M9 18h6"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>
+</svg>`;
+
+const ICON_RETURNING_1 = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M11 9a1 1 0 0 0 1-1V5.061a1 1 0 0 1 1.811-.75l6.836 6.836a1.207 1.207 0 0 1 0 1.707l-6.836 6.835a1 1 0 0 1-1.811-.75V16a1 1 0 0 0-1-1H5a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z"/>
+</svg>`;
+
+const ICON_RETURNING_2 = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 7v4"/><path d="M14 21v-3a2 2 0 0 0-4 0v3"/><path d="M14 9h-4"/>
+  <path d="M18 11h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2"/>
+  <path d="M18 21V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16"/>
+</svg>`;
+
+const ICON_DELAYED_1 = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3 2 6"/><path d="m22 6-3-3"/>
+  <path d="M6.38 18.7 4 21"/><path d="M17.64 18.67 20 21"/>
+</svg>`;
+
+
+function getStatusIconsHTML(status){
+  const s = normStatus(status);
+  if (s === "Preparing") return `<span class="statusIcons preparing">${ICON_PREPARING_1}</span>`;
+  if (s === "Delayed") return `<span class="statusIcons delayed">${ICON_DELAYED_1}</span>`;
+  if (s === "Transporting") return `<span class="statusIcons transporting">${ICON_TRANSPORTING_1}</span>`;
+  if (s === "Returning") return `<span class="statusIcons returning">${ICON_RETURNING_1}${ICON_RETURNING_2}</span>`;
+  return "";
+}
+
+
+/* =========================================================
+   DEPARTURE CELL (strike original + show current)
+========================================================= */
+function formatDepartureCell(m){
+  const d = m.details || {};
+  const cur = d.departureFromHospital || "";
+  const orig = d.departureOriginal || "";
+  const changed = orig && cur && (orig !== cur);
+
+  if (!cur && !orig) return `<span class="muted">-</span>`;
+
+  if (changed){
+    return `
+      <span style="text-decoration:line-through;color:#6b7280;font-weight:900;margin-right:8px;display:inline-block;">
+        ${escapeHtml(orig)}
+      </span>
+      <span style="font-weight:1000;color:#111827;display:inline-block;">
+        ${escapeHtml(cur)}
+      </span>
+    `;
+  }
+  return `<span style="font-weight:1000;color:#111827;display:inline-block;">${escapeHtml(cur || orig)}</span>`;
+}
+
+/* =========================================================
+   DETAILS RENDER
+========================================================= */
+function fmt(v){ return v ? escapeHtml(v) : '<span class="muted">-</span>'; }
+function section(title, rows){
+  const kv = rows.map(([k,v]) => `<div class="k">${escapeHtml(k)}</div><div class="v">${v}</div>`).join("");
+  return `<div class="section"><h3>${escapeHtml(title)}</h3><div class="kv">${kv}</div></div>`;
+}
+
+function renderStampHistory(m){
+  const op = (m.details || {}).OperationStamp;
+  if (!op || !Array.isArray(op.steps) || !op.steps.length) return '<span class="muted">-</span>';
+
+  const items = [...op.steps]
+    .sort((a,b)=> String(a.tsISO||"").localeCompare(String(b.tsISO||"")))
+    .map(s => {
+      const t = s.tsISO ? new Date(s.tsISO) : null;
+      const tt = t ? t.toLocaleString("th-TH") : "-";
+      const by = s.by || "-";
+      const note = s.note ? ` • <span class="muted">${escapeHtml(s.note)}</span>` : "";
+      return `<div style="margin:0 0 8px;">
+        <div><strong>${escapeHtml(s.label || s.key || "-")}</strong></div>
+        <div class="muted" style="font-size:12px;">${escapeHtml(tt)} • by: ${escapeHtml(by)}${note}</div>
+      </div>`;
+    }).join("");
+
+  return items;
+}
+
+function renderStatusLog(m){
+  const log = m?.details?.statusLog;
+  if (!Array.isArray(log) || !log.length) return '<span class="muted">-</span>';
+
+  const items = [...log]
+    .sort((a,b)=> String(a.atISO||"").localeCompare(String(b.atISO||"")))
+    .map(x => {
+      const t = x.atISO ? new Date(x.atISO).toLocaleString("th-TH") : "-";
+      const from = x.from || "-";
+      const to = x.to || "-";
+      const by = x.by || "-";
+      const src = x.source ? ` • <span class="muted">${escapeHtml(x.source)}</span>` : "";
+      const note = x.note ? ` • <span class="muted">${escapeHtml(x.note)}</span>` : "";
+      return `
+        <div style="margin:0 0 8px;">
+          <div><strong>${escapeHtml(from)} → ${escapeHtml(to)}</strong></div>
+          <div class="muted" style="font-size:12px;">
+            ${escapeHtml(t)} • by: ${escapeHtml(by)}${src}${note}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+  return items || '<span class="muted">-</span>';
+}
+
+function renderDetails(m){
+  window.__detailMission = m;
+
+  const p = m.details || {};
+  const blocks = [];
+
+  blocks.push(section("Patient Information — ข้อมูลผู้ป่วย", [
+    ["Full Name", fmt(p.fullName)],
+    ["Gender", fmt(p.gender)],
+    ["Age (years)", fmt(p.ageYears)],
+    ["Weight (kg)", fmt(p.weightKg)],
+    ["Nationality", fmt(p.nationality)],
+    ["HN", fmt(p.hn)],
+    ["Ward", fmt(p.ward)],
+    ["Diagnosis", fmt(p.diagnosis)],
+    ["Purpose of Transport", fmt(p.purpose)]
+  ]));
+
+  blocks.push(section("Vehicle", [
+    ["Vehicle Type", fmt(p.vehicleType)],
+    ["Vehicle (free text)", fmt(m.vehicle)]
+  ]));
+
+  const ft = getFromTo(m);
+  blocks.push(section("Locations — สถานที่", [
+    ["From", `
+      ${fmt(ft.from)}
+      <div style="margin-top:8px;">
+        <button class="btn secondary tiny" type="button" onclick="openRouteTo('from')">Route</button>
+      </div>
+    `],
+    ["From detail (optional)", fmt(ft.fromDetail)],
+    ["To", `
+      ${fmt(ft.to)}
+      <div style="margin-top:8px;">
+        <button class="btn secondary tiny" type="button" onclick="openRouteTo('to')">Route</button>
+      </div>
+    `],
+    ["To detail (optional)", fmt(ft.toDetail)],
+    ["From pin (lat,lng)", (p.fromLat && p.fromLng) ? fmt(`${p.fromLat}, ${p.fromLng}`) : '<span class="muted">-</span>'],
+    ["To pin (lat,lng)", (p.toLat && p.toLng) ? fmt(`${p.toLat}, ${p.toLng}`) : '<span class="muted">-</span>']
+  ]));
+
+  blocks.push(section("Status Change Log — ประวัติการเปลี่ยนสถานะ", [
+  ["History", renderStatusLog(m)]
+]));
+
+  const timeRows = [];
+  const orig = p.departureOriginal || "";
+  const cur  = p.departureFromHospital || "";
+  if (cur || orig){
+    if (orig && cur && orig !== cur){
+      timeRows.push(["Departure (original)", fmt(orig)]);
+      timeRows.push(["Departure (current)", fmt(cur)]);
+    } else {
+      timeRows.push(["Departure from SNH/SMCH hospital", fmt(cur || orig)]);
+    }
+  }
+  blocks.push(section("Time Log — บันทึกเวลา", timeRows.length ? timeRows : [["(No time log)", '<span class="muted">-</span>']]));
+
+  blocks.push(section("Operation Stamp — ประวัติ stamp", [
+    ["History", renderStampHistory(m)]
+  ]));
+
+  blocks.push(section("Mission", [
+    ["Mission Type (table label)", fmt(getTypeLabelForTable(m))],
+    ["Type Key", fmt(m.typeKey)],
+    ["Status", `<span class="badge ${badgeClassFromStatus(m.status)}">${escapeHtml(normStatus(m.status))}</span>`],
+    ["Notes", fmt(m.notes)]
+  ]));
+
+  if (p.cancel){
+  blocks.push(section("Cancel Info", [
+    ["Reason", fmt(p.cancel.reason || p.cancel.reasonKey)],
+    ["Cancelled By", fmt(p.cancel.cancelledBy)],
+    ["Cancelled At", fmt(p.cancel.cancelledAtISO ? new Date(p.cancel.cancelledAtISO).toLocaleString("th-TH") : "")],
+    ["Source", fmt(p.cancel.source)],
+    ["Device", fmt(p.cancel.deviceId)]
+  ]));
+}
+
+
+  return blocks.join("");
+}
+
+/* =========================================================
+   PATTERNS (same logic as before, keep)
+========================================================= */
+function makeSteps(list){ return list.map(x => ({ key:x.key, label:x.label })); }
+
+const STEPS_BASE = makeSteps([
+  { key:"actual_departure", label:"Actual departure : ออกฐาน" },
+  { key:"driving", label:"Driving : ระหว่างเดินทาง" },
+  { key:"arriving_receiving", label:"Arriving at receiving facility : ถึง รพ.ปลายทาง" },
+  { key:"turnover_complete", label:"Completing turnover of care : ส่งต่อเสร็จ" },
+  { key:"return_to_base", label:"Return to base : ถึงฐาน" },
+  { key:"back_in_service", label:"Back in service : พร้อมปฏิบัติงาน" }
+]);
+
+const STEPS_EMS = makeSteps([
+  { key:"actual_departure", label:"Actual departure : ออกฐาน" },
+  { key:"arriving_scene", label:"Arriving at scene : ถึงที่เกิดเหตุ" },
+  { key:"initial_contact", label:"Initial patient contact : พบผู้ป่วย" },
+  { key:"packing_complete", label:"Complete packing : แพ็คผู้ป่วยเสร็จ" },
+  { key:"depart_scene", label:"Departing scene : ออกจากที่เกิดเหตุ" },
+  { key:"driving", label:"Driving : ระหว่างเดินทาง" },
+  { key:"arriving_receiving", label:"Arriving at receiving facility : ถึง รพ.ปลายทาง" },
+  { key:"turnover_complete", label:"Completing turnover of care : ส่งต่อเสร็จ" },
+  { key:"return_to_base", label:"Return to base : ถึงฐาน" },
+  { key:"back_in_service", label:"Back in service : พร้อมปฏิบัติงาน" }
+]);
+
+const STEPS_IFT_IN = makeSteps([
+  { key:"actual_departure", label:"Actual departure : ออกฐาน" },
+  { key:"arriving_referring", label:"Arriving at referring facility : ถึง รพ.ต้นทาง" },
+  { key:"initial_contact", label:"Initial patient contact : พบผู้ป่วย" },
+  { key:"packing_complete", label:"Complete packing : เตรียมผู้ป่วยเสร็จ" },
+  { key:"depart_referring", label:"Departing referring facility : ออกจาก รพ.ต้นทาง" },
+  { key:"driving", label:"Driving : ระหว่างเดินทาง" },
+  { key:"arriving_receiving", label:"Arriving at receiving facility : ถึง รพ.ปลายทาง" },
+  { key:"turnover_complete", label:"Completing turnover of care : ส่งต่อเสร็จ" },
+  { key:"return_to_base", label:"Return to base : ถึงฐาน" },
+  { key:"back_in_service", label:"Back in service : พร้อมปฏิบัติงาน" }
+]);
+
+const STEPS_IFT_OUT = makeSteps([
+  { key:"actual_departure", label:"Actual departure : ออกฐาน" },
+  { key:"arriving_referring", label:"Arriving at referring facility : ถึงตึก/ห้องผู้ป่วย" },
+  { key:"initial_contact", label:"Initial patient contact : พบผู้ป่วย" },
+  { key:"packing_complete", label:"Complete packing : เตรียมผู้ป่วยเสร็จ" },
+  { key:"depart_hospital", label:"Departing hospital : ออกจาก รพ.ต้นทาง" },
+  { key:"driving", label:"Driving : ระหว่างเดินทาง" },
+  { key:"arriving_receiving", label:"Arriving at receiving facility : ถึง รพ.ปลายทาง" },
+  { key:"turnover_complete", label:"Completing turnover of care : ส่งต่อเสร็จ" },
+  { key:"return_to_base", label:"Return to base : ถึงฐาน" },
+  { key:"back_in_service", label:"Back in service : พร้อมปฏิบัติงาน" }
+]);
+
+const STEPS_ESCORT_IN = makeSteps([
+  { key:"actual_departure", label:"Actual departure : ออกฐาน" },
+  { key:"arriving_airport", label:"Arriving at airport : ถึงสนามบิน" },
+  { key:"initial_contact", label:"Initial patient contact : พบผู้ป่วย" },
+  { key:"packing_complete", label:"Complete packing : เตรียมผู้ป่วยเสร็จ" },
+  { key:"depart_airport", label:"Departing airport : ออกจากสนามบิน" },
+  { key:"driving", label:"Driving : ระหว่างเดินทาง" },
+  { key:"arriving_receiving", label:"Arriving at receiving facility : ถึง รพ.ปลายทาง" },
+  { key:"turnover_complete", label:"Completing turnover of care : ส่งต่อเสร็จ" },
+  { key:"return_to_base", label:"Return to base : ถึงฐาน" },
+  { key:"back_in_service", label:"Back in service : พร้อมปฏิบัติงาน" }
+]);
+
+const STEPS_ESCORT_OUT = makeSteps([
+  { key:"actual_departure", label:"Actual departure : ออกฐาน" },
+  { key:"arriving_patient_location", label:"Arriving at patient location : ถึงตึก/ห้องผู้ป่วย" },
+  { key:"initial_contact", label:"Initial patient contact : พบผู้ป่วย" },
+  { key:"packing_complete", label:"Complete packing : เตรียมผู้ป่วยเสร็จ" },
+  { key:"depart_hospital", label:"Departing hospital : ออกจาก รพ.ต้นทาง" },
+  { key:"driving", label:"Driving : ระหว่างเดินทาง" },
+  { key:"arriving_airport", label:"Arriving at airport : ถึงสนามบิน" },
+  { key:"turnover_complete", label:"Completing hand-off : ส่งต่อเสร็จ" },
+  { key:"return_to_base", label:"Return to base : ถึงฐาน" },
+  { key:"back_in_service", label:"Back in service : พร้อมปฏิบัติงาน" }
+]);
+
+const STEPS_PROC_SEND_WAIT_PICK = makeSteps([
+  { key:"actual_departure", label:"Actual departure : ออกฐาน" },
+  { key:"arriving_patient_location", label:"Arriving at patient location : ถึงตึก/ห้องผู้ป่วย" },
+  { key:"initial_contact", label:"Initial patient contact : พบผู้ป่วย" },
+  { key:"packing_complete", label:"Complete packing : เตรียมผู้ป่วยเสร็จ" },
+  { key:"depart_origin", label:"Departing origin : ออกจาก รพ./ตึกต้นทาง" },
+  { key:"driving", label:"Driving : ระหว่างเดินทาง" },
+  { key:"arriving_procedure", label:"Arriving at procedure facility : ถึงสถานที่ทำหัตถการ" },
+  { key:"handoff_complete", label:"Completing hand-off : ส่งต่อเสร็จ" },
+  { key:"wait_pickup", label:"Waiting for pickup : รอรับผู้ป่วย" },
+  { key:"depart_procedure", label:"Departing procedure facility : ออกจากสถานที่ทำหัตถการ" },
+  { key:"driving_back", label:"Driving back : ระหว่างเดินทางกลับ" },
+  { key:"arriving_destination", label:"Arriving at destination : ถึงปลายทาง" },
+  { key:"turnover_complete", label:"Completing turnover of care : ส่งต่อเสร็จ" },
+  { key:"return_to_base", label:"Return to base : ถึงฐาน" },
+  { key:"back_in_service", label:"Back in service : พร้อมปฏิบัติงาน" }
+]);
+
+const STEPS_PROC_SEND = makeSteps([
+  { key:"actual_departure", label:"Actual departure : ออกฐาน" },
+  { key:"arriving_patient_location", label:"Arriving at patient location : ถึงตึก/ห้องผู้ป่วย" },
+  { key:"initial_contact", label:"Initial patient contact : พบผู้ป่วย" },
+  { key:"packing_complete", label:"Complete packing : เตรียมผู้ป่วยเสร็จ" },
+  { key:"depart_origin", label:"Departing origin : ออกจาก รพ./ตึกต้นทาง" },
+  { key:"driving", label:"Driving : ระหว่างเดินทาง" },
+  { key:"arriving_procedure", label:"Arriving at procedure facility : ถึงสถานที่ทำหัตถการ" },
+  { key:"handoff_complete", label:"Completing hand-off : ส่งต่อเสร็จ" },
+  { key:"return_to_base", label:"Return to base : ถึงฐาน" },
+  { key:"back_in_service", label:"Back in service : พร้อมปฏิบัติงาน" }
+]);
+
+const STEPS_PROC_PICK = makeSteps([
+  { key:"actual_departure", label:"Actual departure : ออกฐาน" },
+  { key:"arriving_procedure", label:"Arriving at procedure facility : ถึงสถานที่ทำหัตถการ" },
+  { key:"initial_contact", label:"Initial patient contact : พบผู้ป่วย" },
+  { key:"packing_complete", label:"Complete packing : เตรียมผู้ป่วยเสร็จ" },
+  { key:"depart_procedure", label:"Departing procedure facility : ออกจากสถานที่ทำหัตถการ" },
+  { key:"driving", label:"Driving : ระหว่างเดินทาง" },
+  { key:"arriving_destination", label:"Arriving at destination : ถึงปลายทาง" },
+  { key:"turnover_complete", label:"Completing turnover of care : ส่งต่อเสร็จ" },
+  { key:"return_to_base", label:"Return to base : ถึงฐาน" },
+  { key:"back_in_service", label:"Back in service : พร้อมปฏิบัติงาน" }
+]);
+
+const STEPS_SERVICE_PICKUP = makeSteps([
+  { key:"actual_departure", label:"Actual departure : ออกฐาน" },
+  { key:"arriving_pickup", label:"Arriving at pickup point : ถึงจุดรับ" },
+  { key:"initial_contact", label:"Initial patient contact : พบผู้ป่วย" },
+  { key:"packing_complete", label:"Complete packing : เตรียมผู้ป่วยเสร็จ" },
+  { key:"depart_pickup", label:"Departing pickup point : ออกจากจุดรับ" },
+  { key:"driving", label:"Driving : ระหว่างเดินทาง" },
+  { key:"arriving_dropoff", label:"Arriving at drop-off : ถึงปลายทาง" },
+  { key:"turnover_complete", label:"Completing turnover : ส่งต่อเสร็จ" },
+  { key:"return_to_base", label:"Return to base : ถึงฐาน" },
+  { key:"back_in_service", label:"Back in service : พร้อมปฏิบัติงาน" }
+]);
+
+const STEPS_SERVICE_SEND = makeSteps([
+  { key:"actual_departure", label:"Actual departure : ออกฐาน" },
+  { key:"arriving_patient_location", label:"Arriving at patient location : ถึงตึก/ห้องผู้ป่วย" },
+  { key:"initial_contact", label:"Initial patient contact : พบผู้ป่วย" },
+  { key:"packing_complete", label:"Complete packing : เตรียมผู้ป่วยเสร็จ" },
+  { key:"depart_origin", label:"Departing origin : ออกจาก รพ./ตึกต้นทาง" },
+  { key:"driving", label:"Driving : ระหว่างเดินทาง" },
+  { key:"arriving_dropoff", label:"Arriving at drop-off : ถึงจุดส่ง" },
+  { key:"handoff_complete", label:"Completing hand-off : ส่งต่อเสร็จ" },
+  { key:"return_to_base", label:"Return to base : ถึงฐาน" },
+  { key:"back_in_service", label:"Back in service : พร้อมปฏิบัติงาน" }
+]);
+
+function patternForTypeKey(typeKey){
+  const k = String(typeKey || "").trim();
+
+  if (k === "EMS_BASIC" || k === "EMS_ADV")
+    return { title:"EMS", patternKey:"EMS", steps: STEPS_EMS };
+
+  if (k === "IFT_BASIC_IN" || k === "IFT_ADV_IN" || k === "AP_CLINIC_IFT")
+    return { title:"IFT (Refer In)", patternKey:"IFT_IN", steps: STEPS_IFT_IN };
+
+  if (k === "IFT_BASIC_OUT" || k === "IFT_ADV_OUT")
+    return { title:"IFT (Refer Out)", patternKey:"IFT_OUT", steps: STEPS_IFT_OUT };
+
+  if (k === "AP_ESCORT_IN" || k === "TARMAC_IN")
+    return { title:"Airport Escort (IN)", patternKey:"ESCORT_IN", steps: STEPS_ESCORT_IN };
+
+  if (k === "AP_ESCORT_OUT" || k === "TARMAC_OUT")
+    return { title:"Airport Escort (OUT)", patternKey:"ESCORT_OUT", steps: STEPS_ESCORT_OUT };
+
+  if (k === "PROC_SEND_WAIT_PICK")
+    return { title:"Procedure (Send & Wait & Pick)", patternKey:"PROC_SEND_WAIT_PICK", steps: STEPS_PROC_SEND_WAIT_PICK };
+
+  if (k === "PROC_SEND")
+    return { title:"Procedure (Send)", patternKey:"PROC_SEND", steps: STEPS_PROC_SEND };
+
+  if (k === "PROC_PICK")
+    return { title:"Procedure (Pick)", patternKey:"PROC_PICK", steps: STEPS_PROC_PICK };
+
+  if (k === "HOME_PICKUP" || k === "HHC" || k === "HHC_PICKUP")
+    return { title:"Service (Pickup)", patternKey:"SERVICE_PICKUP", steps: STEPS_SERVICE_PICKUP };
+
+  if (k === "HOME_DISCH" || k === "HHC_SEND")
+    return { title:"Service (Send)", patternKey:"SERVICE_SEND", steps: STEPS_SERVICE_SEND };
+
+  return { title:"Base", patternKey:"BASE", steps: STEPS_BASE };
+}
+
+/* =========================================================
+   DEVICE ID + APP STATE
+========================================================= */
+const DEVICE_ID = (() => {
+  try{
+    let id = localStorage.getItem("SCC_DEVICE_ID");
+    if (!id){
+      id = "DEV-" + Math.random().toString(36).slice(2,10);
+      localStorage.setItem("SCC_DEVICE_ID", id);
+    }
+    return id;
+  }catch{
+    return "DEV-UNKNOWN";
+  }
+})();
+
+let allMissions = [];
+let currentMissionId = null;
+if (typeof window.stampMissionId === "undefined") window.stampMissionId = null;
+
+/* =========================================================
+   TOP STATS  ✅ include Cancelled in Total (Day/Year)
+========================================================= */
+function updateTopStatsFromSelectedDate(all, selectedDateISO){
+  const yearEl = document.getElementById("total");
+  const tEl    = document.getElementById("todayTotal");
+  const aEl    = document.getElementById("activeToday");
+  const rEl    = document.getElementById("remainingScheduled");
+  const cEl    = document.getElementById("completedN");
+  const xEl    = document.getElementById("cancelledN");
+
+  const sel  = selectedDateISO || getTodayISO();
+  const year = sel.slice(0,4);
+
+  const inYear = all.filter(m => (getMissionDateISO(m) || "").slice(0,4) === year);
+  const inDay  = all.filter(m => getMissionDateISO(m) === sel);
+
+  const activeSet = new Set(["Preparing","Delayed","Transporting","Returning"]);
+
+  const totalYear = inYear.length;
+  const totalDay  = inDay.length;
+
+  const activeDay = inDay.filter(m => activeSet.has(normStatus(getRawStatus(m)))).length;
+  const remSched  = inDay.filter(m => normStatus(getRawStatus(m)) === "Scheduled").length;
+  const compDay   = inDay.filter(m => normStatus(getRawStatus(m)) === "Completed").length;
+  const cancDay   = inDay.filter(m => isCancelled(m)).length;
+
+  if (yearEl) yearEl.textContent = String(totalYear);
+  if (tEl)    tEl.textContent    = String(totalDay);
+  if (aEl)    aEl.textContent    = String(activeDay);
+  if (rEl)    rEl.textContent    = String(remSched);
+  if (cEl)    cEl.textContent    = String(compDay);
+  if (xEl)    xEl.textContent    = String(cancDay);
+
+  const title = document.getElementById("tableTitle");
+  if (title){
+    const isToday = sel === getTodayISO();
+    title.textContent = isToday ? "Today’s Missions" : `Missions — ${sel}`;
+  }
+}
+
+/* =========================================================
+   FILTERS
+========================================================= */
+function getSelectedDateISO(){
+  const df = document.getElementById("dateFilter");
+  return (df && df.value) ? String(df.value).slice(0,10) : getTodayISO();
+}
+
+function matchSearch(m, q){
+  if (!q) return true;
+  const s = q.toLowerCase();
+  const ft = getFromTo(m);
+  const pool = [
+    m.id, getTypeLabelForTable(m), m.typeKey,
+    ft.from, ft.to, m.notes,
+    (m.details||{}).diagnosis, (m.details||{}).hn
+  ].map(x => String(x || "").toLowerCase());
+  return pool.some(x => x.includes(s));
+}
+
+function matchStatus(m, status){
+  const want = String(status || "ALL");
+  if (want === "ALL") return true;
+  if (want === "Activated") return isActivated(m);
+  return normStatus(getRawStatus(m)) === want;
+}
+
+function renderTable(rows, selectedDate){
+  const tb = document.getElementById("missionBody");
+  if (!tb) return;
+
+  const cn = document.getElementById("countNote");
+  const todayISO = getTodayISO();
+  const isTodayView = (String(selectedDate || "") === todayISO);
+
+  // =========================
+  // ไม่ใช่วันนี้ → แสดงแบบเดิม
+  // =========================
+  if (!isTodayView){
+    if (!Array.isArray(rows) || !rows.length){
+      tb.innerHTML = `<tr><td colspan="8" class="muted">No missions</td></tr>`;
+      if (cn) cn.textContent = "0 missions";
+      return;
+    }
+
+    tb.innerHTML = rows.map(m => {
+      const ft = getFromTo(m);
+      const s  = normStatus(getRawStatus(m));
+
+      return `
+        <tr>
+          <td><strong>${escapeHtml(m.id || "-")}</strong></td>
+          <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
+          <td>${formatDepartureCell(m)}</td>
+          <td>${escapeHtml(getTypeLabelForTable(m))}</td>
+          <td>${escapeHtml(ft.from || "-")}</td>
+          <td>${escapeHtml(ft.to || "-")}</td>
+          <td>
+            <div class="statusCell">
+              <span class="badge ${badgeClassFromStatus(s)}">${escapeHtml(s)}</span>
+              ${getStatusIconsHTML(s)}
+            </div>
+          </td>
+          <td>
+            <div class="actionCell">
+              <button class="btn light tiny" type="button" onclick="openDetails('${escapeHtml(m.id)}')">Details</button>
+              ${
+                (() => {
+                  const st = getTableOnDutyBtnState(m);
+                  return `<button class="btn pill tiny ${st.cls}" type="button" onclick="openStamp('${escapeHtml(m.id)}')">${escapeHtml(st.text)}</button>`;
+                })()
+              }
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    if (cn) cn.textContent = `${rows.length} missions`;
+    return;
+  }
+
+  // =========================
+  // วันนี้: Active + Done (Completed/Cancelled) แบบ collapsible
+  // =========================
+  const all = Array.isArray(rows) ? rows : [];
+
+  function hasStarted(m){ return !!getStepISO(m, "actual_departure"); }
+  function isCompleted(m){ return normStatus(getRawStatus(m)) === "Completed"; }
+
+  const doneRows = all.filter(m => isCompleted(m) || isCancelled(m));
+  const activeCandidates = all.filter(m => !(isCompleted(m) || isCancelled(m)));
+
+  const todayRows = [];
+  const backlogRows = [];
+
+  activeCandidates.forEach(m => {
+    const req = getMissionDateISO(m);
+    if (req && !hasStarted(m) && req < todayISO){
+      backlogRows.push(m);
+    } else {
+      todayRows.push(m);
+    }
+  });
+
+  backlogRows.sort((a,b)=> String(getMissionDateISO(a)||"").localeCompare(String(getMissionDateISO(b)||"")));
+  doneRows.sort((a,b)=>{
+    const da = _depMinutesOfDay(a);
+    const db = _depMinutesOfDay(b);
+    if (da !== db) return da - db;
+    return String(a.id||"").localeCompare(String(b.id||""));
+  });
+
+  function headerRow(title, subText){
+    return `
+      <tr style="background:#f8fafc;">
+        <td colspan="8" style="padding:10px 12px; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;">
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <div style="font-weight:900; color:#111827;">${escapeHtml(title)}</div>
+            <div class="muted" style="font-size:12px;">${escapeHtml(subText || "")}</div>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  function renderMissionRow(m){
+    const ft = getFromTo(m);
+    const s  = normStatus(getRawStatus(m));
+
+    return `
+      <tr>
+        <td><strong>${escapeHtml(m.id || "-")}</strong></td>
+        <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
+        <td>${formatDepartureCell(m)}</td>
+        <td>${escapeHtml(getTypeLabelForTable(m))}</td>
+        <td>${escapeHtml(ft.from || "-")}</td>
+        <td>${escapeHtml(ft.to || "-")}</td>
+        <td>
+          <div class="statusCell">
+            <span class="badge ${badgeClassFromStatus(s)}">${escapeHtml(s)}</span>
+            ${getStatusIconsHTML(s)}
+          </div>
+        </td>
+        <td>
+          <div class="actionCell">
+            <button class="btn light tiny" type="button" onclick="openDetails('${escapeHtml(m.id)}')">Details</button>
+            ${
+              (() => {
+                const st = getTableOnDutyBtnState(m);
+                return `<button class="btn pill tiny ${st.cls}" type="button" onclick="openStamp('${escapeHtml(m.id)}')">${escapeHtml(st.text)}</button>`;
+              })()
+            }
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  let html = "";
+
+  // A) Today missions
+  html += headerRow("Today missions", `${todayRows.length} mission(s)`);
+  html += todayRows.length
+    ? todayRows.map(m => renderMissionRow(m)).join("")
+    : `<tr><td colspan="8" class="muted">No active missions today</td></tr>`;
+
+  // B) Done (Completed + Cancelled) collapsible
+  if (doneRows.length){
+    html += dividerRow();
+    html += groupHeaderRow("done", doneRows.length);
+
+    if (!isCollapsed("done")){
+      html += dividerRow();
+      html += doneRows.map(m => renderMissionRow(m)).join("");
+    }
+  }
+
+  tb.innerHTML = html;
+
+  const totalShown = todayRows.length + doneRows.length;
+  if (cn) cn.textContent = `${totalShown} missions (Active ${todayRows.length} + Done ${doneRows.length})`;
+}
+
+
+/* =========================================================
+   MAIN RENDER
+========================================================= */
+function render(){
+  allMissions = readMissions();
+
+  if (autoUpdatePreparingDelayed(allMissions)){
+    writeMissions(allMissions);
+    allMissions = readMissions();
+  }
+
+  const selectedDate = getSelectedDateISO();
+  const todayISO = getTodayISO();
+
+  updateTopStatsFromSelectedDate(allMissions, selectedDate);
+
+  const q  = String((document.getElementById("search") || {}).value || "").trim();
+  const st = String((document.getElementById("statusFilter") || {}).value || "ALL");
+
+  let rows;
+
+  if (selectedDate === todayISO){
+    rows = allMissions.filter(m => getWorkloadDateISO(m, todayISO) === todayISO);
+  } else {
+    rows = allMissions.filter(m => getMissionDateISO(m) === selectedDate);
+  }
+
+  rows = rows.filter(m => matchSearch(m, q));
+  rows = rows.filter(m => matchStatus(m, st));
+
+  // ✅ ใช้ sort helpers global (ไม่ประกาศซ้ำใน render)
+  rows.sort((a,b)=> {
+    const ta = _tierRank(a.status);
+    const tb = _tierRank(b.status);
+    if (ta !== tb) return ta - tb;
+
+    if (ta === 0){
+      const ba = _activeBlockRank(a.status);
+      const bb = _activeBlockRank(b.status);
+      if (ba !== bb) return ba - bb;
+
+      const ma = _depMinutesOfDay(a);
+      const mb = _depMinutesOfDay(b);
+      if (ma !== mb) return ma - mb;
+
+      return String(a.id||"").localeCompare(String(b.id||""));
+    }
+
+    const ma = _depMinutesOfDay(a);
+    const mb = _depMinutesOfDay(b);
+    if (ma !== mb) return ma - mb;
+    return String(a.id||"").localeCompare(String(b.id||""));
+  });
+
+  renderTable(rows, selectedDate);
+}
+
+function safeRender(){
+  try{ render(); }catch(e){ console.error(e); }
+}
+
+/* =========================================================
+   DETAILS MODAL
+   (ของคุณเดิมทั้งหมด — คงไว้)
+========================================================= */
+const modalOverlay = document.getElementById("modalOverlay");
+const modalTitle   = document.getElementById("modalTitle");
+const modalSub     = document.getElementById("modalSub");
+const modalBody    = document.getElementById("modalBody");
+const closeModalBtn= document.getElementById("closeModalBtn");
+
+const editTimeBtn  = document.getElementById("editTimeBtn");
+const editBtn      = document.getElementById("editBtn");
+const deleteBtn    = document.getElementById("deleteBtn");
+
+const editOverlay  = document.getElementById("editOverlay");
+const editTitle    = document.getElementById("editTitle");
+const editSub      = document.getElementById("editSub");
+const closeEditBtn = document.getElementById("closeEditBtn");
+const cancelEditBtn= document.getElementById("cancelEditBtn");
+const saveEditBtn  = document.getElementById("saveEditBtn");
+const newDeparture = document.getElementById("newDeparture");
+const reportedBy   = document.getElementById("reportedBy");
+
+const search       = document.getElementById("search");
+const statusFilter = document.getElementById("statusFilter");
+const dateFilter   = document.getElementById("dateFilter");
+
+const clearBtn     = document.getElementById("clearBtn");
+const exportMonthBtn = document.getElementById("exportMonthBtn");
+const exportYearBtn  = document.getElementById("exportYearBtn");
+const clock        = document.getElementById("clock");
+
+function isoToHHMM(iso){
+  try{
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+  }catch{ return ""; }
+}
+
+function getReturnToBaseHHMM(m){
+  try{
+    const op = m?.details?.OperationStamp;
+    const steps = Array.isArray(op?.steps) ? op.steps : [];
+    const rt = steps.find(s => s.key === "return_to_base");
+    if (rt?.tsISO) return isoToHHMM(rt.tsISO);
+    const bis = steps.find(s => s.key === "back_in_service");
+    if (bis?.tsISO) return isoToHHMM(bis.tsISO);
+    return "";
+  }catch{
+    return "";
+  }
+}
+
+function getTableOnDutyBtnState(m){
+  const status = normStatus(m?.status);
+  let text = "On Duty";
+  let cls = "onDuty";
+
+  if (status === "Completed"){
+    const hhmm = getReturnToBaseHHMM(m);
+    if (hhmm){
+      text = `Time ${hhmm}`;
+      cls = "timeDone";
+    } else {
+      text = "On Duty";
+      cls = "onDuty";
+    }
+  }
+  return { text, cls };
+}
+
+function getMissionById(id){
+  const missions = readMissions();
+  return missions.find(x => String(x.id) === String(id)) || null;
+}
+function upsertMission(m){
+  const missions = readMissions();
+  const idx = missions.findIndex(x => String(x.id) === String(m.id));
+  if (idx >= 0) missions[idx] = m;
+  else missions.push(m);
+  writeMissions(missions);
+}
+
+function syncDetailsFooterButton(){
+  const btn = document.getElementById("openStampBtn");
+  if (!btn) return;
+
+  const m = currentMissionId ? getMissionById(currentMissionId) : null;
+  const op = m?.details?.OperationStamp;
+
+  btn.classList.remove("timeDone");
+  btn.classList.add("onDuty");
+  btn.textContent = "On Duty";
+
+  if (!m || !op || !Array.isArray(op.steps) || !op.steps.length) return;
+
+  const status = normStatus(m.status);
+
+  if (status === "Completed"){
+    const rtb = op.steps.find(s => s.key === "return_to_base");
+    const targetISO = rtb?.tsISO || "";
+    const hhmm = targetISO ? isoToHHMM(targetISO) : "";
+    if (hhmm){
+      btn.classList.remove("onDuty");
+      btn.classList.add("timeDone");
+      btn.textContent = `Time ${hhmm}`;
+    }
+    return;
+  }
+  return;
+}
+
+function openDetails(id){
+  const m = allMissions.find(x => String(x.id) === String(id));
+  if (!m) return;
+
+  currentMissionId = m.id;
+  window.__detailMission = m;
+
+  const dep = (m.details||{}).departureFromHospital || (m.details||{}).departureOriginal || "";
+  modalTitle.textContent = `Mission ${m.id}`;
+  modalSub.textContent = [
+    `${getMissionDateISO(m) || "-"} ${dep}`.trim(),
+    getTypeLabelForTable(m)
+  ].filter(Boolean).join(" • ");
+
+  modalBody.innerHTML = renderDetails(m);
+  modalOverlay.style.display = "flex";
+  syncDetailsFooterButton();
+}
+
+function closeModal(){
+  modalOverlay.style.display = "none";
+  modalBody.innerHTML = "";
+  currentMissionId = null;
+  window.__detailMission = null;
+}
+
+document.getElementById("closeModalBtn")?.addEventListener("click", closeModal);
+modalOverlay?.addEventListener("click", (e) => {
+  if (e.target === modalOverlay) closeModal();
+});
+
+/* =========================================================
+   CANCEL DIALOG (match index/operation_line style) ✅
+========================================================= */
+const cancelOverlay = document.getElementById("cancelOverlay");
+const cancelByEl    = document.getElementById("cancelBy");
+
+function _getSelectedCancelReasonKey(){
+  const nodes = document.querySelectorAll('input[name="cancelReason"]');
+  for (const n of nodes){
+    if (n.checked) return String(n.value || "").trim();
+  }
+  return "";
+}
+
+function _reasonLabelFromKey(k){
+  if (k === "MISSED") return "Missed mission";
+  if (k === "ABORTED") return "Aborted mission";
+  if (k === "INCORRECT") return "Incorrect information";
+  return k || "-";
+}
+
+function openCancelDialog(){
+  closeStamp(); // กัน cancel โผล่ซ้อนหน้า stamp
+
+  if (!currentMissionId) return;
+  const m = getMissionById(currentMissionId);
+  if (!m) return;
+
+  const s = normStatus(m.status);
+  if (s === "Completed"){
+    alert("Mission นี้ Completed แล้ว — ไม่สามารถ Cancel ได้");
+    return;
+  }
+  if (s === "Cancelled"){
+    alert("Mission นี้ถูก Cancelled แล้ว");
+    return;
+  }
+
+  // ✅ ต้องมี cancelTitle/cancelSub ใน HTML
+  const titleEl = document.getElementById("cancelTitle");
+  const subEl   = document.getElementById("cancelSub");
+  if (titleEl) titleEl.textContent = `Cancel mission ${m.id}`;
+  if (subEl) subEl.textContent = `${getMissionDateISO(m) || "-"} • ${getTypeLabelForTable(m)}`;
+
+  // reset fields
+  if (cancelByEl) cancelByEl.value = "";
+  document.querySelectorAll('input[name="cancelReason"]').forEach(n => n.checked = false);
+
+  if (cancelOverlay) cancelOverlay.style.display = "flex";
+}
+
+function closeCancelDialog(){
+  if (cancelOverlay) cancelOverlay.style.display = "none";
+  if (cancelByEl) cancelByEl.value = "";
+  document.querySelectorAll('input[name="cancelReason"]').forEach(n => n.checked = false);
+}
+
+function confirmCancelMission(){
+  if (!currentMissionId) return;
+
+  const m = getMissionById(currentMissionId);
+  if (!m) return;
+
+  const by = String(cancelByEl?.value || "").trim();
+  if (!by){
+    alert("กรุณากรอก Cancelled by (required)");
+    return;
+  }
+
+  const reasonKey = _getSelectedCancelReasonKey();
+  if (!reasonKey){
+    alert("กรุณาเลือกเหตุผลการยกเลิก (บังคับ)");
+    return;
+  }
+
+  const reasonLabel = _reasonLabelFromKey(reasonKey);
+
+  // ✅ log + set status
+  setStatusWithLog(m, "Cancelled", by, "cancel", reasonLabel);
+
+  m.details = m.details || {};
+  m.details.cancel = {
+    reasonKey,               // ✅ key แบบ MISSED/ABORTED/INCORRECT
+    reason: reasonLabel,     // ✅ label ไว้โชว์
+    cancelledBy: by,
+    cancelledAtISO: nowISO(),
+    source: "OP",
+    deviceId: DEVICE_ID
+  };
+
+  upsertMission(m);
+
+  closeCancelDialog();
+  closeModal();   // optional: ปิด details
+  safeRender();
+}
+
+// ✅ bind buttons (match your HTML ใหม่)
+document.getElementById("cancelMissionBtn")?.addEventListener("click", openCancelDialog);
+document.getElementById("closeCancelBtn")?.addEventListener("click", closeCancelDialog);
+document.getElementById("cancelCancelBtn")?.addEventListener("click", closeCancelDialog);
+document.getElementById("confirmCancelBtn")?.addEventListener("click", confirmCancelMission);
+
+cancelOverlay?.addEventListener("click", (e) => {
+  if (e.target === cancelOverlay) closeCancelDialog();
+});
+
+
+/* =========================================================
+   FIX: Hard reset button bindings (On Duty / Cancel)
+   - กันเคส event ซ้อน/ผูกผิด/onclick เก่า
+========================================================= */
+function hardResetDetailButtons(){
+  const onDutyOld = document.getElementById("openStampBtn");
+  const cancelOld = document.getElementById("cancelMissionBtn");
+  if (!onDutyOld || !cancelOld) return;
+
+  // 1) clone เพื่อ "ล้าง event listener ทั้งหมด" ที่เคยผูกไว้
+  const onDutyNew = onDutyOld.cloneNode(true);
+  const cancelNew = cancelOld.cloneNode(true);
+
+  onDutyOld.replaceWith(onDutyNew);
+  cancelOld.replaceWith(cancelNew);
+
+  // 2) ผูกใหม่ให้ถูกต้อง 100%
+  onDutyNew.addEventListener("click", () => {
+    if (!currentMissionId) return;
+    openStamp(currentMissionId);
+  });
+
+  cancelNew.addEventListener("click", () => {
+    openCancelDialog();
+  });
+}
+
+
+/* =========================================================
+   STAMP PANEL MODULE — OPERATION
+   (ของคุณเดิมทั้งหมด — คงไว้)
+   ✅ Cleaned: no duplicated helpers below, no render() direct call, safeRender only
+========================================================= */
+
+if (typeof window.stampMissionId === "undefined") window.stampMissionId = null;
+
+function ensureOperationStamp(m){
+  m.details = m.details || {};
+  if (!m.details.OperationStamp){
+    const pat = patternForTypeKey(m.typeKey);
+    m.details.OperationStamp = {
+      startedAt: nowISO(),
+      startedBy: "",
+      status: "Active",
+      patternKey: pat.patternKey,
+      steps: [],
+      lastUpdatedAt: nowISO()
+    };
+  }
+  const pat = patternForTypeKey(m.typeKey);
+  m.details.OperationStamp.patternKey = pat.patternKey;
+  m.details.OperationStamp.lastUpdatedAt = nowISO();
+  return m;
+}
+
+function stepAlreadyStamped(opStamp, stepKey){
+  return (opStamp.steps || []).some(s => String(s.key) === String(stepKey));
+}
+
+function shouldBeReturning(mm, stepKey){
+  const pk = String(
+    mm?.details?.OperationStamp?.patternKey ||
+    patternForTypeKey(mm?.typeKey).patternKey ||
+    ""
+  ).trim();
+  const k = String(stepKey || "").trim();
+
+  if (pk === "IFT_IN" && k === "driving") return true;
+  if (pk === "IFT_OUT" && k === "turnover_complete") return true;
+  if (pk === "ESCORT_IN" && k === "driving") return true;
+  if (pk === "PROC_SEND" && k === "handoff_complete") return true;
+  if (pk === "PROC_PICK" && k === "driving") return true;
+  if (pk === "SERVICE_PICKUP" && k === "driving") return true;
+  if (pk === "SERVICE_SEND" && k === "handoff_complete") return true;
+
+  if (pk === "PROC_SEND_WAIT_PICK"){
+    if (k === "turnover_complete") return true;
+
+    if (k === "driving"){
+      const keys = new Set((mm.details?.OperationStamp?.steps || []).map(s => String(s.key)));
+      if (keys.has("depart_procedure")) return true;
+    }
+    if (k === "driving_back") return true;
+  }
+
+  return false;
+}
+
+function hasAllStepsStamped(mm){
+  const op = mm?.details?.OperationStamp;
+  if (!op) return false;
+
+  const pat = patternForTypeKey(mm.typeKey);
+  const needed = new Set((pat.steps || []).map(s => String(s.key)));
+  const stamped = new Set((op.steps || []).map(s => String(s.key)));
+
+  for (const k of needed){
+    if (!stamped.has(k)) return false;
+  }
+  return needed.size > 0;
+}
+
+function updateStampFooter(m){
+  const infoEl = document.getElementById("stampFooterInfo");
+  if (!infoEl) return;
+
+  const op = (m?.details||{}).OperationStamp;
+  if (!op){ infoEl.textContent = "-"; return; }
+
+  const started = op.startedAt ? new Date(op.startedAt).toLocaleString("th-TH") : "-";
+  const by = op.startedBy || "-";
+  const st = op.status || "Active";
+  infoEl.textContent = `Started: ${started} • By: ${by} • Status: ${st} • Device: ${DEVICE_ID}`;
+}
+
+function renderStampGrid(m){
+  const grid = document.getElementById("stampGrid");
+  if (!grid) return;
+
+  const pat = patternForTypeKey(m.typeKey);
+  const op = (m.details||{}).OperationStamp || { steps:[] };
+
+  const rows = (pat.steps || []).map(step => {
+    const found = (op.steps || []).find(s => String(s.key) === String(step.key));
+    const disabled = !!found || op.status === "Completed";
+    const btnLabel = found ? "Done" : "Stamp";
+    const hhmm = found?.tsISO ? isoToHHMM(found.tsISO) : "";
+
+    const rawLabel = String(step.label || "");
+    let en = rawLabel, th = "";
+    if (rawLabel.includes(":")){
+      const parts = rawLabel.split(":");
+      en = (parts[0] || "").trim();
+      th = parts.slice(1).join(":").trim();
+    }
+
+    return `
+      <div class="stampRow">
+        <div class="stampLeft">
+          <div class="stampKey" title="${escapeHtml(rawLabel)}">${escapeHtml(en || rawLabel)}</div>
+          ${th ? `<div class="muted" style="font-size:12px;margin-top:2px;">${escapeHtml(th)}</div>` : ``}
+        </div>
+
+        <div class="stampActions">
+          <button class="btn ${found ? "light":"secondary"} tiny"
+            ${disabled ? "disabled style='opacity:0.5;cursor:not-allowed;'" : ""}
+            onclick="stampStep('${escapeHtml(m.id)}','${escapeHtml(step.key)}')">${btnLabel}</button>
+
+          ${found ? `<div class="muted" style="font-size:12px;font-weight:900;">${escapeHtml(hhmm)}</div>` : ``}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  grid.innerHTML = rows || `<div class="muted">No steps.</div>`;
+}
+
+function openStamp(id){
+  const m = getMissionById(id);
+  if (!m) return;
+
+  window.stampMissionId = m.id;
+
+  const pat = patternForTypeKey(m.typeKey);
+  const titleEl = document.getElementById("stampTitle");
+  if (titleEl) titleEl.textContent = pat.title || `Stamp Pattern: ${pat.patternKey}`;
+
+  const subEl = document.getElementById("stampSub");
+  if (subEl){
+    const dep = (m.details||{}).departureFromHospital || (m.details||{}).departureOriginal || "";
+    const ft = getFromTo(m);
+    const typeLabel = getTypeLabelForTable(m);
+    subEl.textContent = [
+      `Mission ${m.id}`,
+      `${getMissionDateISO(m) || ""} ${dep}`.trim(),
+      typeLabel,
+      (ft.from || ft.to) ? `${ft.from} → ${ft.to}` : ""
+    ].filter(Boolean).join(" • ");
+  }
+
+  const mm = ensureOperationStamp(m);
+  upsertMission(mm);
+
+  const op = mm.details.OperationStamp;
+  const byEl = document.getElementById("stampBy");
+  const noteEl = document.getElementById("stampNote");
+  if (byEl) byEl.value = op.startedBy || "";
+  if (noteEl) noteEl.value = "";
+
+  renderStampGrid(mm);
+  updateStampFooter(mm);
+
+  const ov = document.getElementById("stampOverlay");
+  if (ov) ov.style.display = "flex";
+}
+
+function closeStamp(){
+  const ov = document.getElementById("stampOverlay");
+  if (ov) ov.style.display = "none";
+  const grid = document.getElementById("stampGrid");
+  if (grid) grid.innerHTML = "";
+  window.stampMissionId = null;
+}
+
+function stampStep(missionId, stepKey){
+  const by = String(document.getElementById("stampBy")?.value || "").trim();
+  const note = String(document.getElementById("stampNote")?.value || "").trim();
+
+  if (!by){
+    alert("กรุณาใส่ชื่อผู้ปฏิบัติงาน (ผู้กด stamp)");
+    return;
+  }
+
+  const m = getMissionById(missionId);
+  if (!m) return;
+
+  const mm = ensureOperationStamp(m);
+  const op = mm.details.OperationStamp;
+
+  if (!op.startedBy) op.startedBy = by;
+
+  if (op.status === "Completed"){
+    alert("เคสนี้ถูก Completed แล้ว");
+    return;
+  }
+
+  const pat = patternForTypeKey(mm.typeKey);
+  const stepMeta = (pat.steps || []).find(s => String(s.key) === String(stepKey));
+  if (!stepMeta) return;
+
+  if (stepAlreadyStamped(op, stepKey)){
+    alert("Step นี้ถูก stamp ไปแล้ว");
+    return;
+  }
+
+  // ✅ status เดิม (ไม่ใช้ getStatus)
+  const prevStatus = normStatus(mm.status || mm.details?.status || "Scheduled");
+
+  // ✅ push stamp
+  op.steps.push({
+    key: stepMeta.key,
+    label: stepMeta.label,
+    tsISO: nowISO(),
+    note: note || "",
+    by,
+    source: "OP",
+    deviceId: DEVICE_ID
+  });
+
+  // ✅ อัปเดต metadata ทุกครั้ง
+  op.lastUpdatedAt = nowISO();
+  op.lastUpdatedBy = by;
+
+  // ✅ คำนวณ status ใหม่
+  let nextStatus = prevStatus;
+
+  if (String(stepMeta.key) === "actual_departure"){
+    nextStatus = "Transporting";
+  }
+
+  if (shouldBeReturning(mm, stepMeta.key) && normStatus(nextStatus) !== "Completed"){
+    nextStatus = "Returning";
+  }
+
+  if (hasAllStepsStamped(mm)){
+    nextStatus = "Completed";
+    op.status = "Completed";
+    op.lastUpdatedAt = nowISO();
+    op.lastUpdatedBy = by;
+  } else {
+    op.status = "Active";
+  }
+
+  // ✅ log เฉพาะตอน status เปลี่ยนจริง
+  if (normStatus(nextStatus) !== normStatus(prevStatus)){
+    setStatusWithLog(
+      mm,
+      nextStatus,
+      by,
+      "stamp",
+      `Step: ${stepMeta.key}${note ? " • " + note : ""}`
+    );
+  }
+
+  upsertMission(mm);
+
+  renderStampGrid(mm);
+  updateStampFooter(mm);
+
+  // ✅ refresh details ถ้า modal เปิดอยู่
+  try{
+    if (document.getElementById("modalOverlay")?.style.display === "flex" &&
+        String(currentMissionId) === String(missionId)){
+      document.getElementById("modalBody").innerHTML = renderDetails(mm);
+      syncDetailsFooterButton();
+    }
+  }catch{}
+
+  safeRender();
+}
+
+function wireStampUI(){
+  if (window.__STAMP_WIRED__) return;
+  window.__STAMP_WIRED__ = true;
+
+  document.getElementById("closeStampBtn")?.addEventListener("click", closeStamp);
+
+  document.getElementById("stampOverlay")?.addEventListener("click", (e)=>{
+    const overlay = document.getElementById("stampOverlay");
+    if (e.target === overlay) closeStamp();
+  });
+
+  document.getElementById("clearStampsBtn")?.addEventListener("click", ()=>{
+    if (!window.stampMissionId) return;
+    if (!confirm("Clear stamps ของ mission นี้ทั้งหมดใช่ไหม?")) return;
+
+    const m = getMissionById(window.stampMissionId);
+    if (!m) return;
+
+    if (m.details && m.details.OperationStamp){
+      delete m.details.OperationStamp;
+    }
+    upsertMission(m);
+
+    const mm = ensureOperationStamp(m);
+    upsertMission(mm);
+
+    renderStampGrid(mm);
+    updateStampFooter(mm);
+
+    try{
+      if (document.getElementById("modalOverlay")?.style.display === "flex" &&
+          String(currentMissionId) === String(window.stampMissionId)){
+        document.getElementById("modalBody").innerHTML = renderDetails(mm);
+        syncDetailsFooterButton();
+      }
+    }catch{}
+
+    safeRender();
+  });
+
+  document.getElementById("markCompletedBtn")?.addEventListener("click", ()=>{
+    if (!window.stampMissionId) return;
+
+    const by = String(document.getElementById("stampBy")?.value || "").trim();
+    if (!by){
+      alert("กรุณาใส่ชื่อผู้ปฏิบัติงาน (ผู้กด stamp)");
+      return;
+    }
+
+    const m = getMissionById(window.stampMissionId);
+    if (!m) return;
+
+    const mm = ensureOperationStamp(m);
+    const op = mm.details.OperationStamp;
+    if (!op.startedBy) op.startedBy = by;
+
+    if (!hasAllStepsStamped(mm)){
+      alert("ยัง stamp ไม่ครบทุกช่อง — ต้อง stamp ให้ครบทุก step ก่อนถึงจะ Completed ได้");
+      return;
+    }
+
+    op.status = "Completed";
+    op.lastUpdatedAt = nowISO();
+    op.lastUpdatedBy = by;
+
+    setStatusWithLog(mm, "Completed", by, "stamp", "Mark Completed (all steps stamped)");
+
+    upsertMission(mm);
+    closeStamp();
+
+    try{
+      if (document.getElementById("modalOverlay")?.style.display === "flex" &&
+          String(currentMissionId) === String(mm.id)){
+        document.getElementById("modalBody").innerHTML = renderDetails(mm);
+        syncDetailsFooterButton();
+      }
+    }catch{}
+
+    safeRender();
+  });
+
+  // (optional แต่แนะนำ) Save & Exit = แค่ปิด overlay
+  document.getElementById("saveExitBtn")?.addEventListener("click", ()=>{
+    if (!window.stampMissionId) { closeStamp(); return; }
+
+    const by = String(document.getElementById("stampBy")?.value || "").trim();
+    const m = getMissionById(window.stampMissionId);
+    if (m){
+      const mm = ensureOperationStamp(m);
+      const op = mm.details.OperationStamp;
+      if (by){
+        if (!op.startedBy) op.startedBy = by;
+        op.lastUpdatedBy = by;
+      }
+      op.lastUpdatedAt = nowISO();
+      upsertMission(mm);
+    }
+    closeStamp();
+    safeRender();
+  });
+}
+
+
+/* =========================================================
+   CONTROLS + SAFE RENDER
+========================================================= */
+function wireControls(){
+  document.getElementById("search")?.addEventListener("input", safeRender);
+  document.getElementById("statusFilter")?.addEventListener("change", safeRender);
+  document.getElementById("dateFilter")?.addEventListener("change", safeRender);
+  document.getElementById("refreshBtn")?.addEventListener("click", safeRender);
+}
+
+/* =========================================================
+   BOOT (ONE ONLY ✅)
+   - clock
+   - default dateFilter = today (ถ้า user ยังไม่เลือก)
+   - render now + cross-tab sync
+========================================================= */
+let __BOOTED__ = false;
+
+function __startClock(){
+  const c = document.getElementById("clock");
+  if (!c) return;
+
+  function tick(){
+    c.textContent = new Date().toLocaleTimeString("th-TH");
+  }
+  tick();
+
+  if (!window.__CLOCK_TIMER__){
+    window.__CLOCK_TIMER__ = setInterval(tick, 1000);
+  }
+}
+
+function __setDefaultDateFilter(){
+  const df = document.getElementById("dateFilter");
+  if (!df) return;
+
+  if (!df.value) df.value = getTodayISO();
+
+  // ✅ บังคับให้ filter ทำงานทันที (กัน LINE/iOS)
+  df.dispatchEvent(new Event("input",  { bubbles:true }));
+  df.dispatchEvent(new Event("change", { bubbles:true }));
+}
+
+function __kickRender(){
+  __startClock();
+  __setDefaultDateFilter();
+
+  // ✅ render หลายจังหวะ กัน BFCache/LINE in-app
+  safeRender();
+  setTimeout(safeRender, 30);
+  setTimeout(safeRender, 200);
+  requestAnimationFrame(safeRender);
+}
+
+function __bootOperationPage(){
+  if (__BOOTED__) return;
+  __BOOTED__ = true;
+
+  wireControls();
+  wireStampUI();
+  hardResetDetailButtons();   // ✅ เพิ่มบรรทัดนี้
+
+  // ✅ ตอนเปิดหน้า
+  __kickRender();
+
+
+  // ✅ ตอนหน้าโหลดเสร็จจริง
+  window.addEventListener("load", __kickRender);
+
+  // ✅ refresh เมื่อกลับมาโฟกัส/กลับมาแสดงหน้า (iOS/LINE bfcache)
+  window.addEventListener("focus", __kickRender);
+  window.addEventListener("pageshow", __kickRender);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) __kickRender();
+  });
+
+  // auto refresh ทุก 60s (1 ตัวเดียว)
+  if (!window.__AUTO_REFRESH_TIMER__){
+    window.__AUTO_REFRESH_TIMER__ = setInterval(safeRender, 60 * 1000);
+  }
+
+  // cross-tab sync
+  try{
+    if ("BroadcastChannel" in window){
+      const ch = new BroadcastChannel("SCC_SYNC_V1");
+      ch.onmessage = () => safeRender();
+    }
+  }catch{}
+
+  window.addEventListener("storage", (e) => {
+    if (e.key === "SCC_MISSIONS_V1" || e.key === "__SCC_SYNC_PING__") safeRender();
+  });
+
+  // ESC to close overlays
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+
+    const stampOv = document.getElementById("stampOverlay");
+    const modalOv = document.getElementById("modalOverlay");
+    const cancOv  = document.getElementById("cancelOverlay");
+
+    if (stampOv?.style.display === "flex") closeStamp();
+    else if (cancOv?.style.display === "flex") closeCancelDialog();
+    else if (modalOv?.style.display === "flex") closeModal();
+  });
+}
+
+// run boot once regardless readyState
+(function(){
+  if (document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", __bootOperationPage, { once:true });
+  } else {
+    __bootOperationPage();
+  }
+})();
+</script>
+
+
+</body>
+</html>

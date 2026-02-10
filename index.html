@@ -1,0 +1,2982 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Samitivej Communication Center</title>
+
+<style>
+  body{
+    margin:0;
+    background:#f4f6f8;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    text-align:center;
+  }
+
+  .topbar{
+    background:white;
+    box-shadow:0 4px 18px rgba(0,0,0,0.18);
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:8px 14px;
+  }
+
+  .header{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+  }
+  .header img{
+    width:auto;
+    height:70px;
+    object-fit:contain;
+    display:block;
+  }
+
+  .stats{
+    display:flex;
+    justify-content:flex-end;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-left:auto;
+  }
+  .stat{
+    background:white;
+    border-radius:12px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.12);
+    padding:8px 14px;
+    min-width:120px;
+    text-align:center;
+  }
+
+  /* ===== Total (Year) = same size/typography as other stats, only soft grey bg ===== */
+  .stat-year{
+    background:#f3f4f6;
+    box-shadow:0 2px 8px rgba(0,0,0,0.12);
+  }
+  .stat-year span{ color:#006d5b; }
+  .stat-year label{ color:#555; }
+
+  .stat span{
+    display:block;
+    font-size:24px;
+    font-weight:900;
+    color:#006d5b;
+    line-height:1.05;
+  }
+  .stat label{
+    font-size:12px;
+    color:#555;
+  }
+
+  .content{
+    padding:18px 16px 34px;
+    max-width:1320px;
+    margin:0 auto;
+  }
+  h1{
+    font-size:28px;
+    font-weight:800;
+    margin:10px 0 6px;
+  }
+  #clock{
+    font-size:54px;
+    font-weight:900;
+    margin:10px 0 18px;
+  }
+
+  .actionbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    margin:10px 0 14px;
+  }
+  .btn{
+    appearance:none;
+    border:0;
+    border-radius:12px;
+    padding:10px 14px;
+    font-weight:800;
+    cursor:pointer;
+    background:#0b6b5b;
+    color:white;
+    box-shadow:0 3px 10px rgba(0,0,0,0.12);
+  }
+  .btn.secondary{ background:#111827; }
+  .btn.danger{ background:#b42318; }
+  .btn.light{
+    background:#e5e7eb;
+    color:#111827;
+    box-shadow:none;
+    font-weight:900;
+  }
+  .btn.tiny{
+    padding:7px 10px;
+    border-radius:10px;
+    font-weight:900;
+    font-size:12px;
+    box-shadow:none;
+  }
+
+  .card{
+    background:#fff;
+    border-radius:18px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.12);
+    padding:16px;
+    text-align:left;
+    margin-bottom:14px;
+  }
+  .cardHeader{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:12px;
+  }
+  .cardTitle{
+    font-size:18px;
+    font-weight:800;
+    color:#1f2937;
+    margin:0;
+  }
+  .controls{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:flex-end;
+  }
+  .input, .select{
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:10px 12px;
+    font-size:14px;
+    outline:none;
+    background:#fff;
+  }
+
+  .tableWrap{
+    overflow:auto;
+    border-radius:14px;
+    border:1px solid #eef2f7;
+  }
+  table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  min-width:1320px; /* ✅ from 1100 -> ~20% wider */
+  font-size:14px;
+}
+  thead th{
+    position:sticky;
+    top:0;
+    background:#f8fafc;
+    color:#374151;
+    text-align:left;
+    padding:12px 12px;
+    border-bottom:1px solid #e5e7eb;
+    z-index:1;
+    white-space:nowrap;
+  }
+  tbody td{
+    padding:12px 12px;
+    border-bottom:1px solid #f0f2f5;
+    color:#111827;
+    vertical-align:top;
+  }
+  tbody tr:hover{ background:#fafcff; }
+  .muted{ color:#6b7280; }
+
+  .badge{
+    display:inline-block;
+    padding:6px 10px;
+    border-radius:999px;
+    font-weight:800;
+    font-size:12px;
+    border:1px solid transparent;
+    white-space:nowrap;
+  }
+  /* Scheduled = ม่วง */
+.b-scheduled{ background:#f3e8ff; color:#6b21a8; border-color:#d8b4fe; }
+/* Preparing = ฟ้า */
+.b-preparing{ background:#e0f2fe; color:#075985; border-color:#bae6fd; }
+/* Delayed = แดง */
+.b-delayed{ background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+/* Transporting = เขียว */
+.b-transporting{ background:#dcfce7; color:#166534; border-color:#86efac; }
+/* Returning = ส้ม */
+.b-returning{ background:#ffedd5; color:#9a3412; border-color:#fed7aa; }
+/* Completed = เทาอ่อน */
+.b-completed{ background:#f1f5f9; color:#334155; border-color:#d7dee8; }
+/* Cancelled = เทาเข้ม */
+.b-cancelled{ background:#e5e7eb; color:#111827; border-color:#9ca3af; }
+/* Pending / Unknown */
+.b-pending{ background:#f3f4f6; color:#374151; border-color:#e5e7eb; }
+/* Activated = เขียวอมฟ้า (teal) */
+.b-activated{ background:#d1fae5; color:#065f46; border-color:#6ee7b7; }
+
+ /* ===== Status Icons ===== */
+.statusCell{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.statusIcons{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+}
+.statusIcons svg{
+  width:22px !important;
+  height:22px !important;
+  stroke-width:2.4;
+  color:currentColor;
+}
+  .tinyNote{
+    font-size:12px;
+    color:#6b7280;
+    margin:10px 2px 0;
+  }
+
+  .strike{
+    text-decoration:line-through;
+    color:#6b7280;
+    font-weight:900;
+    margin-right:8px;
+    display:inline-block;
+  }
+  .newTime{
+    font-weight:900;
+    color:#111827;
+    display:inline-block;
+  }
+  .depCell{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .depWrap{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  /* ===== MODAL ===== */
+  .modalOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(17,24,39,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    z-index:9999;
+  }
+  .modal{
+    width:min(980px, 100%);
+    background:white;
+    border-radius:18px;
+    box-shadow:0 18px 50px rgba(0,0,0,0.28);
+    overflow:hidden;
+    text-align:left;
+  }
+  .modalHeader{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 16px;
+    background:#f8fafc;
+    border-bottom:1px solid #e5e7eb;
+  }
+  .modalTitle{
+    margin:0;
+    font-size:18px;
+    font-weight:900;
+    color:#111827;
+  }
+  .modalSub{
+    margin:4px 0 0;
+    font-size:12px;
+    color:#6b7280;
+  }
+  .modalBody{
+    padding:16px;
+    max-height:70vh;
+    overflow:auto;
+  }
+  .section{
+    border:1px solid #eef2f7;
+    border-radius:14px;
+    padding:12px;
+    margin-bottom:12px;
+    background:#fff;
+  }
+  .section h3{
+    margin:0 0 8px;
+    font-size:14px;
+    font-weight:900;
+    color:#111827;
+  }
+  .kv{
+    display:grid;
+    grid-template-columns: 220px 1fr;
+    gap:8px 12px;
+    font-size:13px;
+  }
+  .k{ color:#374151; font-weight:800; }
+  .v{ color:#111827; }
+
+  .modalFooter{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 16px;
+    border-top:1px solid #e5e7eb;
+    background:#fff;
+    flex-wrap:wrap;
+  }
+  .footerLeft{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:flex-start;
+  }
+  .footerRight{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    margin-left:auto;
+  }
+  .editedPill{
+    display:inline-block;
+    padding:3px 8px;
+    border-radius:999px;
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+    color:#9a3412;
+    font-weight:900;
+    font-size:11px;
+    line-height:1;
+  }
+
+  /* ===== EDIT DEPARTURE MODAL ===== */
+  .editOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(17,24,39,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    z-index:10000;
+  }
+  .editModal{
+    width:min(560px, 100%);
+    background:white;
+    border-radius:18px;
+    box-shadow:0 18px 50px rgba(0,0,0,0.28);
+    overflow:hidden;
+    text-align:left;
+  }
+  .editHeader{
+    padding:14px 16px;
+    background:#f8fafc;
+    border-bottom:1px solid #e5e7eb;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .editTitle{
+    margin:0;
+    font-size:16px;
+    font-weight:900;
+    color:#111827;
+  }
+  .editBody{
+    padding:16px;
+  }
+  .editGrid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .field label{
+    font-size:13px;
+    font-weight:900;
+    color:#374151;
+  }
+  .field input{
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:10px 12px;
+    font-size:14px;
+    outline:none;
+    background:#fff;
+  }
+  .editHint{
+    font-size:12px;
+    color:#6b7280;
+    margin-top:8px;
+  }
+
+  @media (max-width: 900px){
+    .topbar{ flex-wrap:wrap; }
+    .stats{ width:100%; justify-content:center; margin-left:0; }
+    .header img{ height:62px; }
+    #clock{ font-size:44px; }
+    .kv{ grid-template-columns: 1fr; }
+  }
+
+  /* ===== CANCEL MODAL (like operation_line) ===== */
+  .cancelOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(17,24,39,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    z-index:10001;
+  }
+  .cancelModal{
+    width:min(560px, 100%);
+    background:white;
+    border-radius:18px;
+    box-shadow:0 18px 50px rgba(0,0,0,0.28);
+    overflow:hidden;
+    text-align:left;
+  }
+  .cancelHeader{
+    padding:14px 16px;
+    background:#f8fafc;
+    border-bottom:1px solid #e5e7eb;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .cancelTitle{
+    margin:0;
+    font-size:16px;
+    font-weight:900;
+    color:#111827;
+  }
+  .cancelBody{
+    padding:16px;
+  }
+  .radioList{
+    display:grid;
+    gap:10px;
+    margin-top:8px;
+  }
+  .radioItem{
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:12px;
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    cursor:pointer;
+    background:#fff;
+  }
+  .radioItem:hover{ background:#fafcff; }
+  .radioItem input{ margin-top:3px; }
+  .radioMain{
+    font-weight:900;
+    color:#111827;
+    line-height:1.2;
+  }
+  .radioSub{
+    font-size:12px;
+    color:#6b7280;
+    margin-top:4px;
+    line-height:1.25;
+  }
+  .cancelActions{
+    padding:14px 16px;
+    border-top:1px solid #e5e7eb;
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    flex-wrap:wrap;
+    background:#fff;
+  }
+
+/* ===== Status Icons (color driven by CSS) ===== */
+.statusIcons svg{
+  width:22px !important;
+  height:22px !important;
+  stroke-width:2.4;
+  color:currentColor; /* optional */
+}
+
+/* สีของ icon แต่ละสถานะ */
+.statusIcons.preparing{ color:#075985; }     /* ฟ้า */
+.statusIcons.delayed{ color:#991b1b; }       /* แดง */
+.statusIcons.transporting{ color:#166534; }  /* เขียว */
+.statusIcons.returning{ color:#9a3412; }     /* ส้ม */
+
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+  <div class="header">
+    <img src="header-logo.png" alt="Header Logo">
+  </div>
+
+  <div class="stats statsgrid">
+    <div class="stat stat-year"><span id="total">-</span><label>Total (Year)</label></div>
+    <div class="stat"><span id="todayTotal">-</span><label>Total (Today)</label></div>
+    <div class="stat"><span id="activeToday">-</span><label>Active</label></div>
+    <div class="stat"><span id="remainingScheduled">-</span><label>Remaining Scheduled</label></div>
+    <div class="stat"><span id="completedN">-</span><label>Completed</label></div>
+    <div class="stat"><span id="cancelledN">-</span><label>Cancelled</label></div>
+  </div>
+</div>
+
+<div class="content">
+  <h1>Samitivej Communication Center</h1>
+  <div id="clock">--:--:--</div>
+
+  <div class="actionbar">
+    <div class="muted">Data source: local (form.html)</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+      <button class="btn" onclick="location.href='form.html'">+ Add Mission</button>
+      <button class="btn secondary" id="exportMonthBtn">Export CSV (This Month)</button>
+      <button class="btn secondary" id="exportYearBtn">Export CSV (This Year)</button>
+      <button class="btn danger" id="clearBtn">Clear All</button>
+    </div>
+  </div>
+
+  <!-- ✅ TABLE 1: Today Missions -->
+  <div class="card">
+    <div class="cardHeader">
+      <h2 class="cardTitle" id="tableTitle">Today Missions</h2>
+
+      <div class="controls">
+        <input id="search" class="input" placeholder="Search: ID / type / from / to / notes">
+        <select id="statusFilter" class="select">
+          <option value="ALL">All status</option>
+          <option value="Activated">Activated</option>
+          <option value="Scheduled">Scheduled</option>
+          <option value="Preparing">Preparing</option>
+          <option value="Delayed">Delayed</option>
+          <option value="Transporting">Transporting</option>
+          <option value="Completed">Completed</option>
+          <option value="Cancelled">Cancelled</option>
+          <option value="Pending">Pending</option>
+        </select>
+        <input id="dateFilter" class="input" type="date">
+      </div>
+    </div>
+
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:140px;">Mission ID</th>
+            <th style="width:110px;">Date</th>
+            <th style="width:220px;">Departure (SNH/SMCH)</th>
+            <th style="width:260px;">Mission Type</th>
+            <th>From</th>
+            <th>To</th>
+            <th style="width:150px;">Status</th>
+            <th style="width:120px;">Details</th>
+          </tr>
+        </thead>
+        <tbody id="missionBody">
+          <tr><td colspan="8" class="muted">No data yet. Click “Add Mission”.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tinyNote" id="countNote"></div>
+  </div>
+
+  <!-- ✅ TABLE 2: Active Follow-Up Missions -->
+  <div class="card">
+    <div class="cardHeader">
+      <h2 class="cardTitle" id="followTitle">Active Follow-Up Missions</h2>
+      <div class="muted" style="font-size:12px;">
+        Activated/Delayed/Overdue (moved from previous days), excluding Cancelled/Completed/Aborted
+      </div>
+    </div>
+
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:140px;">Mission ID</th>
+            <th style="width:110px;">Request Date</th>
+            <th style="width:220px;">Scheduled (if any)</th>
+            <th style="width:260px;">Mission Type</th>
+            <th>From</th>
+            <th>To</th>
+            <th style="width:150px;">Status</th>
+            <th style="width:220px;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="followBody">
+          <tr><td colspan="8" class="muted">No follow-up missions.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tinyNote" id="followCountNote"></div>
+  </div>
+</div>
+
+<!-- DETAILS MODAL -->
+<div class="modalOverlay" id="modalOverlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modalHeader">
+      <div>
+        <h2 class="modalTitle" id="modalTitle">Mission Details</h2>
+        <div class="modalSub" id="modalSub"></div>
+      </div>
+    </div>
+
+    <div class="modalBody" id="modalBody"></div>
+
+    <div class="modalFooter">
+  <div class="footerLeft">
+    <button class="btn secondary" id="editTimeBtn">Edit Departure Time</button>
+    <button class="btn secondary" id="editBtn">Edit in Form</button>
+
+    <!-- ✅ NEW: Cancel button (opens same cancel dialog as follow-up) -->
+    <button class="btn" id="cancelBtn">Cancel</button>
+
+    <button class="btn danger" id="deleteBtn">Delete</button>
+  </div>
+
+  <div class="footerRight">
+    <button class="btn light" id="closeModalBtn">Close</button>
+  </div>
+</div>
+  </div>
+</div>
+
+<!-- EDIT DEPARTURE MODAL -->
+<div class="editOverlay" id="editOverlay" role="dialog" aria-modal="true">
+  <div class="editModal">
+    <div class="editHeader">
+      <div>
+        <h3 class="editTitle" id="editTitle">Edit Departure Time</h3>
+        <div class="modalSub" id="editSub"></div>
+      </div>
+      <button class="btn light tiny" id="closeEditBtn">Close</button>
+    </div>
+    <div class="editBody">
+      <div class="editGrid">
+        <div class="field">
+          <label>New Departure Time (HH:MM) *</label>
+          <input id="newDeparture" type="time" required>
+        </div>
+        <div class="field">
+          <label>Received update from (รับแจ้งจากใคร) *</label>
+          <input id="reportedBy" type="text" placeholder="e.g., Nurse PICU A / Dr. B / Call center คุณซี" required>
+        </div>
+      </div>
+      <div class="editHint">
+        * แก้ได้เฉพาะ status: Scheduled / Preparing / Delayed<br>
+        * ถ้าข้อมูลอื่นผิด แนะนำ Cancel แล้ว Add new mission
+      </div>
+      <div class="modalActions" style="padding:14px 0 0; border-top:0; display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+        <button class="btn light" id="cancelEditBtn">Cancel</button>
+        <button class="btn" id="saveEditBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- CANCEL MODAL (Follow-up Cancel) -->
+<div class="cancelOverlay" id="cancelOverlay" role="dialog" aria-modal="true">
+  <div class="cancelModal">
+    <div class="cancelHeader">
+      <div>
+        <h3 class="cancelTitle" id="cancelTitle">Cancel Mission</h3>
+        <div class="modalSub" id="cancelSub"></div>
+      </div>
+      <button class="btn light tiny" id="closeCancelBtn">Close</button>
+    </div>
+
+    <div class="cancelBody">
+  <div class="field" style="gap:8px;">
+
+    <!-- ✅ ADD: Cancelled by -->
+    <div class="field" style="gap:8px; margin-bottom:10px;">
+      <label style="font-size:13px;font-weight:900;color:#374151;">Cancelled by (ชื่อผู้แจ้ง) *</label>
+      <input id="cancelBy" type="text" placeholder="e.g., Nurse A / Dr. B / CC คุณซี" required>
+    </div>
+
+    <!-- ✅ EXISTING: Cancel reason -->
+    <label style="font-size:13px;font-weight:900;color:#374151;">Cancel reason *</label>
+
+    <div class="radioList" id="cancelRadioList">
+      <label class="radioItem">
+        <input type="radio" name="cancelReason" value="MISSED" />
+        <div>
+          <div class="radioMain">Missed mission</div>
+          <div class="radioSub">ยกเลิกก่อนออกเดินทาง</div>
+        </div>
+      </label> 
+        
+
+          <label class="radioItem">
+            <input type="radio" name="cancelReason" value="ABORTED" />
+            <div>
+              <div class="radioMain">Aborted mission</div>
+              <div class="radioSub">ออกเดินทางแล้ว และถูกยกเลิก</div>
+            </div>
+          </label>
+
+          <label class="radioItem">
+            <input type="radio" name="cancelReason" value="INCORRECT" />
+            <div>
+              <div class="radioMain">Incorrect information</div>
+              <div class="radioSub">ข้อมูลผิดพลาด</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="editHint" style="margin-top:10px;">
+          * เลือก 1 ตัวเลือก แล้วกด Confirm<br>
+          * ไม่ว่าเลือกเหตุผลอะไร ระบบจะตั้งสถานะเป็น Cancelled ของวันนั้น
+        </div>
+      </div>
+    </div>
+
+    <div class="cancelActions">
+  <button class="btn light" id="cancelCancelBtn">Close</button>
+  <button class="btn danger" id="confirmCancelBtn">Confirm Cancellation</button>
+</div>
+  </div>
+</div>
+
+<!-- RESCHEDULE MODAL (Follow-up Reschedule) -->
+<div class="editOverlay" id="reschedOverlay" role="dialog" aria-modal="true">
+  <div class="editModal">
+    <div class="editHeader">
+      <div>
+        <h3 class="editTitle" id="reschedTitle">Reschedule Mission</h3>
+        <div class="modalSub" id="reschedSub"></div>
+      </div>
+      <button class="btn light tiny" id="closeReschedBtn">Close</button>
+    </div>
+
+    <div class="editBody">
+      <div class="editGrid">
+        <div class="field">
+  <label>Rescheduled by (ชื่อผู้แจ้ง) *</label>
+  <input id="reschedBy" type="text" placeholder="e.g., Nurse A / Dr. B / CC คุณซี" required>
+</div>
+        
+        <div class="field">
+          <label>Date (YYYY-MM-DD) *</label>
+          <input id="reschedDate" type="date" required>
+        </div>
+
+        <div class="field">
+          <label>Departure Time (HH:MM) *</label>
+          <input id="reschedTime" type="time" required>
+        </div>
+
+        <div class="editHint">
+          This action will:<br>
+          • Change status to <strong>Scheduled</strong><br>
+          • Move mission to <strong>Today Missions</strong><br>
+          • Auto-update to <strong>Preparing</strong> if within 30 minutes (per Today rule)
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+          <button class="btn light" id="cancelReschedBtn">Cancel</button>
+          <button class="btn" id="confirmReschedBtn">Reschedule to Today</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== SHOW JS ERRORS ON SCREEN (copy into index + operation_line) ===== */
+(function(){
+  function showErr(msg){
+    let box = document.getElementById("__errbox");
+    if (!box){
+      box = document.createElement("div");
+      box.id="__errbox";
+      box.style.cssText =
+        "position:fixed;left:10px;right:10px;bottom:10px;z-index:999999;" +
+        "background:#111827;color:#fff;padding:10px 12px;border-radius:12px;" +
+        "font:12px/1.3 system-ui;box-shadow:0 10px 30px rgba(0,0,0,.35);" +
+        "max-height:35vh;overflow:auto;text-align:left;white-space:pre-wrap;";
+      document.body.appendChild(box);
+    }
+    box.textContent = msg + "\n\n" + box.textContent;
+  }
+  window.addEventListener("error", (e)=> showErr("JS Error: " + (e?.message||e) + "\n@ " + (e?.filename||"") + ":" + (e?.lineno||"") + ":" + (e?.colno||"")));
+  window.addEventListener("unhandledrejection", (e)=> showErr("Promise Rejection: " + (e?.reason?.message || e?.reason || e)));
+})();
+
+/* =======================
+   ✅ GOOGLE SHEET WEBAPP (LOG SENDER) — FINAL (ANTI-DUP)
+======================= */
+const STORAGE_KEY     = "SCC_MISSIONS_V1";
+const SHEET_WEBAPP_URL= "https://script.google.com/macros/s/AKfycbzav0HGGsblLPw46w2fnjSnjOLAymJP9xnTQAD_xgexiGbI5NFDmEfEG2V0WUL6dk-tAw/exec";
+const LOG_QUEUE_KEY   = "__SCC_LOG_QUEUE__";
+const SENT_KEY        = "__SCC_SENT_EVENT_IDS__"; // ✅ กันซ้ำฝั่ง client
+
+// ====== time helper (ensure exists) ======
+if (typeof window.nowISO !== "function"){
+  window.nowISO = () => new Date().toISOString();
+}
+
+// ====== event id ======
+function makeEventId_(){
+  return "EVT-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+}
+
+function ensureEventId_(eventObj){
+  if (!eventObj) return "";
+  if (!eventObj.eventId){
+    eventObj.eventId = makeEventId_();
+  }
+  return eventObj.eventId;
+}
+
+// ====== device id ======
+function getDeviceId(){
+  const k = "__SCC_DEVICE_ID__";
+  let id = localStorage.getItem(k);
+  if (!id){
+    id = "DEV-" + Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
+    localStorage.setItem(k, id);
+  }
+  return id;
+}
+
+// ====== base payload ======
+function buildLogBase(m){
+  return {
+    eventAtISO: nowISO(),
+    deviceId: getDeviceId(),
+    mission: m
+  };
+}
+
+// ====== sent cache (with prune) ======
+const SENT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // เก็บ 7 วันพอ
+const SENT_MAX    = 2000;                    // กัน localStorage บวม
+
+function readSentMap_(){
+  try{ return JSON.parse(localStorage.getItem(SENT_KEY) || "{}"); }
+  catch(_){ return {}; }
+}
+function writeSentMap_(map){
+  try{ localStorage.setItem(SENT_KEY, JSON.stringify(map)); }catch(_){}
+}
+function pruneSent_(map){
+  const now = Date.now();
+  // 1) ลบของเก่าเกิน TTL
+  for (const [eid, ts] of Object.entries(map)){
+    if (!ts || (now - ts) > SENT_TTL_MS) delete map[eid];
+  }
+  // 2) จำกัดจำนวนรายการ
+  const entries = Object.entries(map);
+  if (entries.length > SENT_MAX){
+    entries.sort((a,b)=> (a[1]||0) - (b[1]||0)); // เก่าสุดก่อน
+    const toDel = entries.length - SENT_MAX;
+    for (let i=0;i<toDel;i++){
+      delete map[entries[i][0]];
+    }
+  }
+  return map;
+}
+function markSent_(eventId){
+  if (!eventId) return;
+  const map = pruneSent_(readSentMap_());
+  map[eventId] = Date.now();
+  writeSentMap_(map);
+}
+function isSent_(eventId){
+  if (!eventId) return false;
+  const map = pruneSent_(readSentMap_());
+  writeSentMap_(map); // เซฟหลัง prune
+  return !!map[eventId];
+}
+
+// ====== queue ======
+function readQueue_(){
+  try{ return JSON.parse(localStorage.getItem(LOG_QUEUE_KEY) || "[]"); }
+  catch(_){ return []; }
+}
+function writeQueue_(q){
+  try{ localStorage.setItem(LOG_QUEUE_KEY, JSON.stringify(q)); }catch(_){}
+}
+
+function queueLog_(eventObj){
+  ensureEventId_(eventObj); // ✅ สำคัญมาก
+  const eid = eventObj?.eventId || "";
+  const q = readQueue_();
+
+  // ✅ ถ้าเคยส่งแล้ว ไม่ต้องเข้าคิว
+  if (eid && isSent_(eid)){
+    console.log("queueLog_ skipped (already sent):", eid);
+    return;
+  }
+
+  // ✅ ถ้ามี eventId และมีอยู่แล้วในคิว -> ไม่ต้องใส่ซ้ำ
+  if (eid && q.some(x => x?.eventObj?.eventId === eid)){
+    console.log("queueLog_ skipped (already queued):", eid);
+    return;
+  }
+
+  q.push({ t: Date.now(), eventObj });
+  writeQueue_(q);
+}
+
+// ====== push ======
+async function pushLogToSheet(eventObj, opts = {}){
+  ensureEventId_(eventObj); // ✅ สำคัญมาก
+  const { skipQueue = false } = opts;
+  const eid = eventObj?.eventId || "";
+
+  if (eid && isSent_(eid)){
+    console.log("pushLogToSheet skipped (already sent):", eid);
+    return { ok:true, skipped:true };
+  }
+
+  const form = new URLSearchParams();
+  form.set("payload", JSON.stringify(eventObj));
+
+  const maxTry = 2;
+
+  for (let attempt=1; attempt<=maxTry; attempt++){
+    const controller = new AbortController();
+    const timeoutMs = 8000;
+    const timer = setTimeout(()=> controller.abort(), timeoutMs);
+
+    try{
+      const res = await fetch(SHEET_WEBAPP_URL, {
+        method: "POST",
+        mode: "cors",
+        headers: { "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" },
+        body: form.toString(),
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+
+      const txt = await res.text();
+      let data = null;
+      try{ data = JSON.parse(txt); }catch(_){}
+
+      if (!res.ok) throw new Error(`HTTP_${res.status}: ${txt}`);
+      if (data && data.ok === false) throw new Error(`WEBAPP_ERROR: ${data.error || txt}`);
+
+      if (eid) markSent_(eid);
+      console.log("pushLogToSheet OK:", data || txt);
+      return data || { ok:true };
+
+    }catch(err){
+      clearTimeout(timer);
+      console.warn(`pushLogToSheet attempt ${attempt} failed`, err);
+
+      // ✅ fallback no-cors เฉพาะตอน attempt สุดท้าย (กันเน็ต/พรีไฟลท์บล็อก)
+      if (attempt === maxTry){
+        try{
+          await fetch(SHEET_WEBAPP_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" },
+            body: form.toString()
+          });
+          if (eid) markSent_(eid);
+          console.warn("pushLogToSheet fallback OK (no-cors)");
+          return { ok:true, fallback:"no-cors" };
+        }catch(_fallbackErr){
+          // ถ้า fallback ก็ยังไม่สำเร็จ -> ค่อยเข้าคิว
+          if (!skipQueue){
+            if (!(eid && isSent_(eid))){
+              queueLog_(eventObj);
+              console.warn("Queued log. Queue size:", readQueue_().length);
+            }
+          }
+          throw err;
+        }
+      }
+
+      await new Promise(r => setTimeout(r, 400));
+    }
+  }
+}
+
+
+// ====== flush queue ======
+async function flushLogQueue_(){
+  const q = readQueue_();
+  if (!q.length) return;
+
+  const keep = [];
+
+  for (const item of q){
+    const ev = item?.eventObj;
+    ensureEventId_(ev);
+    const eid = ev?.eventId || "";
+
+    // ✅ ถ้าเคยส่งแล้ว (ตาม cache) ไม่ต้องพยายามส่งซ้ำ
+    if (eid && isSent_(eid)) continue;
+
+    try{
+      await pushLogToSheet(ev, { skipQueue: true });
+      // ถ้าสำเร็จ ไม่ต้อง keep
+    }catch(_){
+      keep.push(item); // ยังส่งไม่ได้ เก็บไว้ก่อน
+    }
+  }
+
+  writeQueue_(keep);
+}
+
+
+// ====== auto flush triggers ======
+window.addEventListener("online", flushLogQueue_);
+window.addEventListener("focus", flushLogQueue_);
+setInterval(flushLogQueue_, 60 * 1000);
+
+// ✅ prune sent cache เป็นระยะ
+setInterval(()=>{ writeSentMap_(pruneSent_(readSentMap_())); }, 10 * 60 * 1000);
+
+
+
+/* =======================
+   ✅ UI Mission Type Label (FULL label like form.html)
+   - DO NOT change stored values
+======================= */
+const TYPE_DISPLAY_LABELS = {
+  "EMS_BASIC": "Basic EMS",
+  "EMS_ADV":   "Advance EMS",
+  "IFT_BASIC_IN":  "Basic IFT – Refer In",
+  "IFT_ADV_IN":    "Advance IFT – Refer In",
+  "IFT_BASIC_OUT": "Basic IFT – Refer Out",
+  "IFT_ADV_OUT":   "Advance IFT – Refer Out",
+  "AP_CLINIC_IFT": "Airport Clinic IFT (รับผู้ป่วยจากคลินิกสนามบิน)",
+  "AP_ESCORT_IN":  "Airport escort and transport (รับ-คนไข้นอกเครื่อง)",
+  "AP_ESCORT_OUT": "Airport escort and transport (ส่ง-คนไข้นอกเครื่อง)",
+  "TARMAC_IN":     "TARMAC : Airport escort and transport (รับ-คนไข้ข้างเครื่อง)",
+  "TARMAC_OUT":    "TARMAC : Airport escort and transport (ส่ง-คนไข้ข้างเครื่อง)",
+  "PROC_SEND_WAIT_PICK": "Transport for procedural appointment (ส่งและรอรับ-คนไข้ไปทำหัตถการ)",
+  "PROC_SEND":           "Transport procedural appointment (ส่ง-คนไข้ไปทำหัตถการ)",
+  "PROC_PICK":           "Transport procedural appointment (รับ-คนไข้จากการไปทำหัตถการ)",
+  "HOME_PICKUP": "Home pickup (รับ-คนไข้จากบ้าน)",
+  "HOME_DISCH":  "Discharge home (ส่ง-คนไข้กลับบ้าน)",
+  "HHC_PICKUP": "6.1 Home Health Care (รับ-คนไข้จากบ้าน)",
+  "HHC_SEND":   "6.2 Home Health Care (ส่ง-คนไข้กลับบ้าน)",
+  "OTHER": "7. Other (เขียนหมายเหตุเพิ่มได้)"
+};
+
+function getTypeLabelForTable(m){
+  const k = String(m?.typeKey || "").trim();
+  return TYPE_DISPLAY_LABELS[k] || (m?.type || m?.typeDisplay || "-");
+}
+
+/* =======================
+   REALTIME SYNC (Index <-> Operation)
+======================= */
+const SYNC_CHANNEL_NAME = "SCC_SYNC_V1";
+let syncChannel = null;
+
+function getSyncChannel(){
+  try{
+    if (!syncChannel && "BroadcastChannel" in window){
+      syncChannel = new BroadcastChannel(SYNC_CHANNEL_NAME);
+    }
+  }catch{ /* ignore */ }
+  return syncChannel;
+}
+
+function emitSync(eventName, payload = {}){
+  const ch = getSyncChannel();
+  if (ch){
+    try{ ch.postMessage({ eventName, payload, at: Date.now() }); }catch{}
+  }
+  try{
+    localStorage.setItem("__SCC_SYNC_PING__", JSON.stringify({ eventName, payload, at: Date.now() }));
+  }catch{}
+}
+
+function onSyncMessage(handler){
+  const ch = getSyncChannel();
+  if (ch){
+    ch.onmessage = (e) => {
+      const msg = e?.data;
+      if (msg?.eventName) handler(msg.eventName, msg.payload || {});
+    };
+  }
+  window.addEventListener("storage", (e) => {
+    if (e.key === STORAGE_KEY || e.key === "__SCC_SYNC_PING__"){
+      handler("STORAGE_CHANGED", {});
+    }
+  });
+}
+
+/* ✅ Robust mission date getter */
+function getMissionDateISO(m){
+  const candidates = [
+    m?.date,
+    m?.dateISO,
+    m?.missionDate,
+    m?.details?.date,
+    m?.details?.dateISO,
+    m?.details?.missionDate,
+    m?.details?.missionDateISO,
+  ];
+  for (const v of candidates){
+    const s = String(v ?? "").trim();
+    if (s && /^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  }
+  return "";
+}
+
+/* ===== helpers ===== */
+function pad2(n){ return String(n).padStart(2,'0'); }
+function toISODateLocal(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function getTodayISO(){ return toISODateLocal(new Date()); }
+
+function escapeHtml(s){
+  return String(s ?? "").replace(/[&<>"']/g, m => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[m]));
+}
+function nowHHMM(){
+  const d = new Date();
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function readMissions(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    const missions = Array.isArray(arr) ? arr : [];
+
+    // ✅ HYDRATE status/date ให้พร้อมใช้ทันที
+    const today = getTodayISO();
+    for (const m of missions){
+      if (!m) continue;
+      m.details = m.details || {};
+
+      // ดึง status จากหลายที่ แล้ว normalize
+      const st = m.status || m.details.status || m.details.Status || "";
+      m.status = normStatus(st);
+      m.details.status = m.status; // ✅ keep in sync
+
+      // date กันหลุด
+      m.date = m.date || getMissionDateISO(m) || today;
+    }
+
+    return missions;
+  }catch{
+    return [];
+  }
+}
+
+function writeMissions(arr){
+  const missions = Array.isArray(arr) ? arr : [];
+
+  const today = getTodayISO();
+  for (const m of missions){
+    if (!m) continue;
+    m.details = m.details || {};
+
+    // ✅ FIX: if form saved status into details, hydrate to top-level status
+    m.status = normStatus(m.status || m.details.status || m.details.Status || "");
+    m.details.status = m.status; // ✅ keep in sync
+
+    m.date = m.date || getMissionDateISO(m) || today;
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(missions));
+  emitSync("MISSIONS_UPDATED", {});
+}
+
+function normStatus(s){
+  const raw = String(s ?? "").trim();
+  if (!raw) return "Scheduled";
+
+  const k = raw.toLowerCase();
+
+  if (k === "activated") return "Activated";
+  if (k === "scheduled") return "Scheduled";
+  if (k === "preparing") return "Preparing";
+  if (k === "delayed") return "Delayed";
+  if (k === "transporting") return "Transporting";
+  if (k === "returning") return "Returning";
+  if (k === "completed") return "Completed";
+  if (k === "cancelled" || k === "canceled") return "Cancelled";
+  if (k === "aborted") return "Aborted";
+  if (k === "pending") return "Pending";
+
+  // ถ้าเป็นค่าอื่น ๆ ให้คืนค่าเดิม
+  return raw;
+}
+
+
+/* ===== ICON SVGs ===== */
+const ICON_PREPARING_1 = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 6v6l4 2"/>
+  <path d="M22 12a10 10 0 1 0-11 9.95"/>
+  <path d="m22 16-5.5 5.5L14 19"/>
+</svg>
+`;
+
+const ICON_DELAYED_1 = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="12" cy="13" r="8"/>
+  <path d="M12 9v4l2 2"/>
+  <path d="M5 3 2 6"/>
+  <path d="m22 6-3-3"/>
+  <path d="M6.38 18.7 4 21"/>
+  <path d="M17.64 18.67 20 21"/>
+</svg>
+`;
+
+const ICON_TRANSPORTING_1 = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M10 10H6"/>
+  <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
+  <path d="M19 18h2a1 1 0 0 0 1-1v-3.28a1 1 0 0 0-.684-.948l-1.923-.641a1 1 0 0 1-.578-.502l-1.539-3.076A1 1 0 0 0 16.382 8H14"/>
+  <path d="M8 8v4"/>
+  <path d="M9 18h6"/>
+  <circle cx="17" cy="18" r="2"/>
+  <circle cx="7" cy="18" r="2"/>
+</svg>
+`;
+
+const ICON_RETURNING_1 = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M11 9a1 1 0 0 0 1-1V5.061a1 1 0 0 1 1.811-.75l6.836 6.836a1.207 1.207 0 0 1 0 1.707l-6.836 6.835a1 1 0 0 1-1.811-.75V16a1 1 0 0 0-1-1H5a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z"/>
+</svg>
+`;
+
+const ICON_RETURNING_2 = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 7v4"/>
+  <path d="M14 21v-3a2 2 0 0 0-4 0v3"/>
+  <path d="M14 9h-4"/>
+  <path d="M18 11h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2"/>
+  <path d="M18 21V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16"/>
+</svg>
+`;
+
+function getStatusIconsHTML(status){
+  const s = normStatus(status);
+  if (s === "Preparing") return `<span class="statusIcons preparing">${ICON_PREPARING_1}</span>`;
+  if (s === "Delayed") return `<span class="statusIcons delayed">${ICON_DELAYED_1}</span>`;
+  if (s === "Transporting") return `<span class="statusIcons transporting">${ICON_TRANSPORTING_1}</span>`;
+  if (s === "Returning") return `<span class="statusIcons returning">${ICON_RETURNING_1}${ICON_RETURNING_2}</span>`;
+  return "";
+}
+
+
+
+function getRawStatus(m){
+  const d = (m && m.details) ? m.details : {};
+  const candidates = [
+    m?.status,
+    d?.status,
+    d?.Status,          // ✅ เผื่อ form เก็บเป็น S ใหญ่
+    d?.missionStatus,   // ✅ เผื่อมี field อื่น
+    d?.statusText,
+    d?.statusKey
+  ];
+  for (const v of candidates){
+    const s = String(v ?? "").trim();
+    if (s) return s;
+  }
+  return "";
+}
+
+function isActivated(m){
+  return normStatus(getRawStatus(m)) === "Activated";
+}
+
+function isCancelled(m){
+  return getRawStatus(m).toLowerCase() === "cancelled";
+}
+
+// ✅ status สำหรับ “แสดงผล” = ถ้าเป็น Activated ให้คงไว้ ห้ามโดน logic เวลาเปลี่ยน
+function getDisplayStatus(m){
+  const raw = getRawStatus(m);
+  if (!raw) return "Scheduled";
+  if (raw.toLowerCase() === "activated") return "Activated";
+  return normStatus(raw);
+}
+
+function badgeClassFromStatus(sOrMission){
+  const raw = (typeof sOrMission === "object")
+    ? getRawStatus(sOrMission)
+    : String(sOrMission ?? "");
+
+  const x = normStatus(raw).toLowerCase();
+
+  if (x === "activated") return "b-activated";
+  if (x === "scheduled") return "b-scheduled";
+  if (x === "preparing") return "b-preparing";
+  if (x === "delayed") return "b-delayed";
+  if (x === "transporting") return "b-transporting";
+  if (x === "returning") return "b-returning";   // ✅ อย่าให้ returning ไปใช้ transporting
+  if (x === "completed") return "b-completed";
+  if (x === "cancelled") return "b-cancelled";
+  if (x === "aborted") return "b-aborted";
+  return "b-pending";
+}
+
+
+function toLocalDateTime(dateISO, timeHHMM){
+  if(!dateISO || !timeHHMM) return null;
+  const [h,m] = String(timeHHMM).split(":").map(Number);
+  const d = new Date(dateISO + "T00:00:00");
+  d.setHours(h||0, m||0, 0, 0);
+  return d;
+}
+function nowISO(){
+  const d = new Date();
+  return d.toISOString();
+}
+function isoToISODate(iso){
+  if(!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
+
+/* =======================
+   ✅ Status Change Log helpers
+======================= */
+function ensureStatusLog(m){
+  m.details = m.details || {};
+  if (!Array.isArray(m.details.statusChangeLog)){
+    m.details.statusChangeLog = [];
+  }
+}
+
+function logStatusChange(m, nextStatus, meta = {}){
+  if (!m) return false;
+  m.details = m.details || {};
+
+  const prev = normStatus(getRawStatus(m) || m.status || m.details.status || "");
+  const next = normStatus(nextStatus || "");
+
+  if (!next || prev === next) return false;
+
+  ensureStatusLog(m);
+
+  m.details.statusChangeLog.push({
+    from: prev,
+    to: next,
+    at: nowISO(),
+    by: meta.by || "",           // optional
+    source: meta.source || "",   // e.g. "followup_cancel", "modal_cancel", "auto_today", "reschedule"
+    note: meta.note || ""        // optional
+  });
+
+  // ✅ also keep a direct pointer for "statusChangedAt"
+  m.details.statusChangedAt = nowISO();
+
+  return true;
+}
+
+function renderStatusChangeHistory(m){
+  const d = m.details || {};
+  const log = Array.isArray(d.statusChangeLog) ? d.statusChangeLog : [];
+  if (!log.length) return '<span class="muted">-</span>';
+
+  return [...log].reverse().map(x => {
+    const at = x.at ? new Date(x.at) : null;
+    const atTxt = at ? at.toLocaleString("th-TH") : "-";
+    const from = x.from || "-";
+    const to = x.to || "-";
+
+    // ✅ by = ตัวหนา
+    const by = x.by
+      ? ` • by: <strong>${escapeHtml(x.by)}</strong>`
+      : "";
+
+    const src = x.source
+      ? ` • <span class="muted">${escapeHtml(x.source)}</span>`
+      : "";
+
+    // ✅ note: ทำ "2026-02-04 23:40" ให้ตัวหนา (pattern YYYY-MM-DD HH:MM)
+    let note = "";
+    if (x.note){
+      const highlighted = escapeHtml(x.note).replace(
+        /(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2})/g,
+        "<strong>$1</strong>"
+      );
+      note = ` • <span class="muted">${highlighted}</span>`;
+    }
+
+    return `
+      <div style="margin:0 0 8px;">
+        <div><strong>${escapeHtml(from)} → ${escapeHtml(to)}</strong></div>
+        <div class="muted" style="font-size:12px;">
+          ${escapeHtml(atTxt)}${by}${src}${note}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+/* =======================
+   ✅ scheduledAt (kept for existing features)
+   - NOT used as source-of-truth for grouping anymore
+   - still used by applyAutoStatusForTodayMission
+======================= */
+function getScheduledAtDateObj(m){
+  const d = m?.details || {};
+  const dateISO = getMissionDateISO(m) || String(m?.date || "").slice(0,10);
+  const t = String(d.departureFromHospital || d.departureOriginal || "").trim();
+  if (!dateISO || !t) return null;
+  const dt = toLocalDateTime(dateISO, t);
+  return dt && !isNaN(dt.getTime()) ? dt : null;
+}
+function getScheduledAtISODate(m){
+  const dt = getScheduledAtDateObj(m);
+  return dt ? toISODateLocal(dt) : "";
+}
+function getScheduledAtTimeHHMM(m){
+  const d = m?.details || {};
+  const t = String(d.departureFromHospital || d.departureOriginal || "").trim();
+  return t || "";
+}
+function getRequestDateISO(m){
+  return getMissionDateISO(m) || String(m?.date || "").slice(0,10) || "";
+}
+
+/* =======================
+   ✅ Auto Status when mission is in Today table (kept)
+   Rule:
+   if (now < scheduledAt - 30 min) -> Scheduled
+   if (scheduledAt - 30 min <= now < scheduledAt) -> Preparing
+   after that -> DO NOT auto-change
+   IMPORTANT:
+   - Activated must NEVER be auto-changed
+======================= */
+function applyAutoStatusForTodayMission(m, selectedDayISO){
+  if (!m) return false;
+  m.details = m.details || {};
+
+  // ✅ Activated ห้าม auto เปลี่ยน
+  const rawStatus = String(m.status || m.details.status || "").trim();
+  if (rawStatus === "Activated") return false;
+
+  const st = normStatus(rawStatus);
+
+  if (["Delayed","Transporting","Completed","Cancelled","Aborted"].includes(st)) return false;
+  if (st && !["Scheduled","Preparing"].includes(st)) return false;
+
+  const dt = getScheduledAtDateObj(m);
+  if (!dt) return false;
+
+  const day = toISODateLocal(dt);
+  if (day !== selectedDayISO) return false;
+
+  const now = new Date();
+  const diffMin = (dt - now) / 60000;
+
+    if (diffMin > 30){
+    if (m.status !== "Scheduled"){
+
+      // NOTE: โค้ด log Activated->Scheduled จะไม่เกิดอยู่แล้ว
+      // เพราะ Activated ถูก return false ไปตั้งแต่ต้น (คงไว้ได้ ไม่รบกวนของเดิม)
+      if (normStatus(m.status) === "Activated"){
+        logStatusChange(m, "Scheduled", {
+          source: "auto_today",
+          note: "Auto change by schedule time"
+        });
+      }
+
+      m.status = "Scheduled";
+      m.details.status = m.status;
+      return true;
+    }
+    return false;
+  }
+
+  if (diffMin <= 30 && diffMin > 0){
+    if (m.status !== "Preparing"){
+      m.status = "Preparing";
+      m.details.status = m.status;
+      return true;
+    }
+    return false;
+  }
+
+  return false;
+}
+
+/* =======================
+   ✅ Location resolver (fallback) (unchanged)
+======================= */
+function _firstNonEmpty(...vals){
+  for (const v of vals){
+    const s = String(v ?? "").trim();
+    if (s) return s;
+  }
+  return "";
+}
+function getFromTo(m){
+  const d = m.details || {};
+  const k = String(m.typeKey || "").trim();
+
+  const genericFrom = _firstNonEmpty(
+    d.origin, d.from, d.fromText, d.pickupPoint, d.referringHospital, d.sendingHospital, d.originHospital, d.procedureFacility, d.homeAddress
+  );
+  const genericTo = _firstNonEmpty(
+    d.destination, d.to, d.toText, d.dropoffPoint, d.receivingHospital, d.destinationHospital, d.returnHospital, d.procedureFacility, d.homeAddress
+  );
+
+  const fromDetail = _firstNonEmpty(d.fromDetail, d.pickupDetail, d.originDetail, d.from_note, d.fromNotes);
+  const toDetail   = _firstNonEmpty(d.toDetail, d.dropoffDetail, d.destinationDetail, d.to_note, d.toNotes);
+
+  if (["IFT_BASIC_IN","IFT_ADV_IN","IFT_BASIC_OUT","IFT_ADV_OUT"].includes(k)){
+    return {
+      from: _firstNonEmpty(d.referringHospital, d.origin, d.fromText, genericFrom) || "-",
+      to:   _firstNonEmpty(d.receivingHospital, d.destination, d.toText, genericTo) || "-",
+      fromDetail, toDetail
+    };
+  }
+  if (k === "AP_CLINIC_IFT"){
+    return {
+      from: _firstNonEmpty(d.pickupPoint, d.origin, d.fromText, genericFrom) || "-",
+      to:   _firstNonEmpty(d.receivingHospital, d.destination, d.toText, genericTo) || "-",
+      fromDetail, toDetail
+    };
+  }
+  if (["AP_ESCORT_IN","TARMAC_IN"].includes(k)){
+    return {
+      from: _firstNonEmpty(d.pickupPoint, d.origin, d.fromText, genericFrom) || "-",
+      to:   _firstNonEmpty(d.destinationHospital, d.destination, d.toText, genericTo) || "-",
+      fromDetail, toDetail
+    };
+  }
+  if (["AP_ESCORT_OUT","TARMAC_OUT"].includes(k)){
+    return {
+      from: _firstNonEmpty(d.sendingHospital, d.origin, d.fromText, genericFrom) || "-",
+      to:   _firstNonEmpty(d.dropoffPoint, d.destination, d.toText, genericTo) || "-",
+      fromDetail, toDetail
+    };
+  }
+  if (["PROC_SEND_WAIT_PICK","PROC_SEND"].includes(k)){
+    return {
+      from: _firstNonEmpty(d.originHospital, d.origin, d.fromText, genericFrom) || "-",
+      to:   _firstNonEmpty(d.procedureFacility, d.destination, d.toText, genericTo) || "-",
+      fromDetail, toDetail
+    };
+  }
+  if (k === "PROC_PICK"){
+    return {
+      from: _firstNonEmpty(d.procedureFacility, d.origin, d.fromText, genericFrom) || "-",
+      to:   _firstNonEmpty(d.returnHospital, d.destination, d.toText, genericTo) || "-",
+      fromDetail, toDetail
+    };
+  }
+
+  return {
+    from: genericFrom || "-",
+    to: genericTo || "-",
+    fromDetail, toDetail
+  };
+}
+
+/* ===== Departure cell (highlight edited time) ===== */
+function formatDepartureCell(m){
+  const d = m.details || {};
+  const cur  = String(d.departureFromHospital || "").trim();
+  const orig = String(d.departureOriginal || "").trim();
+  const changed = !!(orig && cur && orig !== cur);
+
+  if (!cur && !orig) return `<span class="muted">-</span>`;
+
+  if (changed){
+    return `
+      <span class="depWrap">
+        <span class="strike">${escapeHtml(orig)}</span>
+        <span class="newTime">${escapeHtml(cur)}</span>
+      </span>
+    `;
+  }
+  return `
+    <span class="depWrap">
+      <span class="newTime">${escapeHtml(cur || orig)}</span>
+    </span>
+  `;
+}
+
+function canEditDeparture(m){
+  const s = normStatus(m.status);
+  return ["Scheduled","Preparing","Delayed"].includes(s);
+}
+
+/* ===== Details modal rendering (unchanged) ===== */
+function fmt(v){ return v ? escapeHtml(v) : '<span class="muted">-</span>'; }
+function section(title, rows){
+  const kv = rows.map(([k,v]) => `<div class="k">${escapeHtml(k)}</div><div class="v">${v}</div>`).join("");
+  return `<div class="section"><h3>${escapeHtml(title)}</h3><div class="kv">${kv}</div></div>`;
+}
+
+/* ... (renderDetails / route helpers / CSV export / follow-up actions) — unchanged ... */
+
+function renderDepartureHistory(m){
+  const d = m.details || {};
+  const log = Array.isArray(d.departureChangeLog) ? d.departureChangeLog : [];
+  if (!log.length) return '<span class="muted">-</span>';
+
+  return [...log].reverse().map(x => {
+    const at = x.at ? new Date(x.at) : null;
+    const atTxt = at ? at.toLocaleString("th-TH") : "-";
+    const from = x.from || "-";
+    const to = x.to || "-";
+    const who = x.reportedBy || "-";
+    return `<div style="margin:0 0 8px;">
+      <div><strong>${escapeHtml(from)} → ${escapeHtml(to)}</strong></div>
+      <div class="muted" style="font-size:12px;">${escapeHtml(atTxt)} • รับแจ้งจาก: ${escapeHtml(who)}</div>
+    </div>`;
+  }).join("");
+}
+
+/* ✅ Operation Stamp Log (read-only) */
+function renderOperationStampLog(m){
+  const d = m.details || {};
+
+  const op = d.OperationStamp;
+  if (op && Array.isArray(op.steps) && op.steps.length){
+    const sorted = [...op.steps].sort((a,b)=> String(a.tsISO||"").localeCompare(String(b.tsISO||"")));
+    return sorted.map(s => {
+      const atTxt = s.tsISO ? new Date(s.tsISO).toLocaleString("th-TH") : "-";
+      const label = s.label || s.key || "-";
+      const by = s.by ? ` • by: ${escapeHtml(s.by)}` : "";
+      const note = s.note ? ` • <span class="muted">${escapeHtml(s.note)}</span>` : "";
+      return `
+        <div style="margin:0 0 8px;">
+          <div><strong>${escapeHtml(label)}</strong></div>
+          <div class="muted" style="font-size:12px;">${escapeHtml(atTxt)}${by}${note}</div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  const ed = d.edStamp;
+  if (ed && Array.isArray(ed.steps) && ed.steps.length){
+    const sorted = [...ed.steps].sort((a,b)=> String(a.tsISO||"").localeCompare(String(b.tsISO||"")));
+    return sorted.map(s => {
+      const atTxt = s.tsISO ? new Date(s.tsISO).toLocaleString("th-TH") : "-";
+      const label = s.label || s.key || "-";
+      const by = s.by ? ` • by: ${escapeHtml(s.by)}` : "";
+      const note = s.note ? ` • <span class="muted">${escapeHtml(s.note)}</span>` : "";
+      return `
+        <div style="margin:0 0 8px;">
+          <div><strong>${escapeHtml(label)}</strong></div>
+          <div class="muted" style="font-size:12px;">${escapeHtml(atTxt)}${by}${note}</div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  const log = Array.isArray(d.timeStampLog) ? d.timeStampLog : [];
+  if (!log.length) return '<span class="muted">-</span>';
+
+  const sorted = [...log].sort((a,b)=> String(a.at||"").localeCompare(String(b.at||"")));
+  return sorted.map(x => {
+    const atTxt = x.at ? new Date(x.at).toLocaleString("th-TH") : "-";
+    const label = x.stepLabel || x.stepKey || "-";
+    return `
+      <div style="margin:0 0 8px;">
+        <div><strong>${escapeHtml(label)}</strong></div>
+        <div class="muted" style="font-size:12px;">${escapeHtml(atTxt)}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+/* ===== Route buttons (unchanged) ===== */
+function _cleanText(s){ return String(s || "").trim(); }
+function _getPin(m, side){
+  const d = (m && m.details) ? m.details : {};
+  const lat = side === "from" ? d.fromLat : d.toLat;
+  const lng = side === "from" ? d.fromLng : d.toLng;
+  const la = Number(lat), lo = Number(lng);
+  if (Number.isFinite(la) && Number.isFinite(lo)) return `${la},${lo}`;
+  return null;
+}
+function _getDestinationText(m, side){
+  const pin = _getPin(m, side);
+  if (pin) return pin;
+
+  const ft = getFromTo(m);
+  const place = side === "from" ? _cleanText(ft.from) : _cleanText(ft.to);
+  const detail = side === "from" ? _cleanText(ft.fromDetail) : _cleanText(ft.toDetail);
+  const combined = [place, detail].filter(Boolean).join(" ");
+  return combined || null;
+}
+function openRouteTo(side){
+  const m = window.__detailMission;
+  if (!m) return;
+
+  const dest = _getDestinationText(m, side);
+  if (!dest){
+    window.open("https://www.google.com/maps", "_blank", "noopener,noreferrer");
+    return;
+  }
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+/* ===== renderDetails (unchanged) ===== */
+function renderDetails(m){
+
+  const p = m.details || {};
+  const blocks = [];
+
+  blocks.push(section("Patient Information — ข้อมูลผู้ป่วย", [
+    ["Full Name", fmt(p.fullName)],
+    ["Gender", fmt(p.gender)],
+    ["Age (years)", fmt(p.ageYears)],
+    ["Weight (kg)", fmt(p.weightKg)],
+    ["Nationality", fmt(p.nationality)],
+    ["HN", fmt(p.hn)],
+    ["Ward", fmt(p.ward)],
+    ["Diagnosis", fmt(p.diagnosis)],
+    ["Purpose of Transport", fmt(p.purpose)]
+  ]));
+
+  blocks.push(section("Vehicle", [
+    ["Vehicle Type", fmt(p.vehicleType)],
+    ["Vehicle (free text)", fmt(m.vehicle)]
+  ]));
+
+  const ft = getFromTo(m);
+  blocks.push(section("Locations — สถานที่", [
+    ["From", `
+      ${fmt(ft.from)}
+      <div style="margin-top:8px;">
+        <button class="btn secondary tiny" type="button" onclick="openRouteTo('from')">Route</button>
+      </div>
+    `],
+    ["From detail (optional)", fmt(ft.fromDetail)],
+    ["To", `
+      ${fmt(ft.to)}
+      <div style="margin-top:8px;">
+        <button class="btn secondary tiny" type="button" onclick="openRouteTo('to')">Route</button>
+      </div>
+    `],
+    ["To detail (optional)", fmt(ft.toDetail)],
+    ["From pin (lat,lng)", (p.fromLat && p.fromLng) ? fmt(`${p.fromLat}, ${p.fromLng}`) : '<span class="muted">-</span>'],
+    ["To pin (lat,lng)", (p.toLat && p.toLng) ? fmt(`${p.toLat}, ${p.toLng}`) : '<span class="muted">-</span>']
+  ]));
+
+  const timeRows = [];
+  if (p.baseLocation !== undefined) timeRows.push(["Base (SNH/SMCH)", fmt(p.baseLocation)]);
+
+  const orig = p.departureOriginal || "";
+  const cur = p.departureFromHospital || "";
+  if (cur || orig){
+    if (orig && cur && orig !== cur){
+      timeRows.push(["Departure (original)", fmt(orig)]);
+      timeRows.push(["Departure (current)", fmt(cur)]);
+    } else {
+      timeRows.push(["Departure from SNH/SMCH hospital", fmt(cur || orig)]);
+    }
+  }
+
+  if (p.preDepartureBriefing) timeRows.push(["Pre-departure Briefing", fmt(p.preDepartureBriefing)]);
+  if (p.schedArriveRefHosp) timeRows.push(["Scheduled Arrival at Referring Hospital", fmt(p.schedArriveRefHosp)]);
+  if (p.schedArriveAirport) timeRows.push(["Scheduled Arrival at Airport", fmt(p.schedArriveAirport)]);
+  if (p.schedFlightArrive) timeRows.push(["Scheduled Flight Arrival", fmt(p.schedFlightArrive)]);
+  if (p.schedFlightDepart) timeRows.push(["Scheduled Flight Departure", fmt(p.schedFlightDepart)]);
+  if (p.schedArriveHome) timeRows.push(["Scheduled Arrival at Home", fmt(p.schedArriveHome)]);
+
+  blocks.push(section("Time Log — บันทึกเวลา", timeRows.length ? timeRows : [["(No time log)", '<span class="muted">-</span>']]));
+
+  blocks.push(section("Operation Stamp — ประวัติ stamp", [
+    ["History", renderOperationStampLog(m)]
+  ]));
+
+  blocks.push(section("Status Change Log — ประวัติการเปลี่ยนสถานะ", [
+  ["History", renderStatusChangeHistory(m)]
+]));
+
+  blocks.push(section("Mission", [
+    ["Mission Group", fmt(m.missionGroup)],
+    ["Mission Type (stored)", fmt(m.type)],
+    ["Display Label (stored)", fmt(m.typeDisplay)],
+    ["Type Key", fmt(m.typeKey)],
+    ["Status", `<span class="badge ${badgeClassFromStatus(m.status)}">${escapeHtml(normStatus(m.status))}</span>`],
+    ["Notes", fmt(m.notes)]
+  ]));
+
+  return blocks.join("");
+}
+
+/* ===== CSV export (unchanged) ===== */
+function csvEscape(v){
+  const s = String(v ?? "");
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+  return s;
+}
+function downloadCSV(filename, rows){
+  const csv = rows.map(r => r.map(csvEscape).join(",")).join("\n");
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+function exportCSV(range){
+  const missions = readMissions();
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+
+  const filtered = missions.filter(ms => {
+    const d = String(ms.date || "").slice(0,10);
+    if (!d) return false;
+    const dt = new Date(d + "T00:00:00");
+    if (range === "month") return dt.getFullYear() === y && dt.getMonth() === m;
+    if (range === "year") return dt.getFullYear() === y;
+    return true;
+  });
+
+  const header = [
+    "MissionID","Date","DepartureOriginal","DepartureCurrent","Status",
+  "MissionGroup","TypeKey","MissionType","DisplayLabel",
+
+  "VehicleType","VehicleFreeText",
+
+  "From","FromDetail","To","ToDetail",
+  "FromLat","FromLng","ToLat","ToLng",
+
+  "LastDepartureChangeBy","LastDepartureChangeAt",
+
+  "PatientName","HN","Diagnosis","Ward","Notes",
+
+  "OperationStatus","OperationPattern","OperationLastUpdatedAt",
+
+  "CancelReasonKey","CancelReason","CancelledAtISO","CancelFrom",
+
+  "LastStatusFrom","LastStatusTo","LastStatusChangedAtISO","LastStatusSource",
+
+  "CancelledBy" 
+  ];
+
+  const data = filtered.map(ms => {
+    const p = ms.details || {};
+    const ft = getFromTo(ms);
+    const log = Array.isArray(p.departureChangeLog) ? p.departureChangeLog : [];
+    const last = log.length ? log[log.length - 1] : null;
+
+    const op = p.OperationStamp || null;
+    const cancel = p.cancel || {};
+
+    const sLog = Array.isArray(ms.details?.statusChangeLog) ? ms.details.statusChangeLog : [];
+    const sLast = sLog.length ? sLog[sLog.length - 1] : null;
+
+    return [
+  // ===== Mission core =====
+  ms.id || "",
+  String(ms.date || "").slice(0,10),
+  p.departureOriginal || "",
+  p.departureFromHospital || "",
+  normStatus(ms.status),
+  ms.missionGroup || "",
+  ms.typeKey || "",
+  ms.type || "",
+  ms.typeDisplay || "",
+
+  // ===== Vehicle =====
+  p.vehicleType || "",
+  ms.vehicle || "",
+
+  // ===== Location =====
+  ft.from || "",
+  ft.fromDetail || "",
+  ft.to || "",
+  ft.toDetail || "",
+  p.fromLat || "",
+  p.fromLng || "",
+  p.toLat || "",
+  p.toLng || "",
+
+  // ===== Departure change (last) =====
+  last ? (last.reportedBy || "") : "",
+  last ? (last.at || "") : "",
+
+  // ===== Patient =====
+  p.fullName || "",
+  p.hn || "",
+  p.diagnosis || "",
+  p.ward || "",
+  ms.notes || "",
+
+  // ===== Operation stamp =====
+  op ? (op.status || "") : "",
+  op ? (op.patternKey || "") : "",
+  op ? (op.lastUpdatedAt || "") : "",
+
+  // ===== Cancel info =====
+  cancel.cancelReasonKey || "",
+  cancel.cancelReason || "",
+  cancel.cancelledAtISO || "",
+  cancel.from || "",
+
+  // ===== Status change log (last) =====
+  sLast ? (sLast.from || "") : "",
+  sLast ? (sLast.to || "") : "",
+  sLast ? (sLast.at || "") : "",
+  sLast ? (sLast.source || "") : "",
+
+  // ===== CancelledBy (match header last) =====
+  cancel.cancelledBy || ""
+];
+  });
+
+  const stamp = range === "month" ? `${y}-${pad2(m+1)}` : `${y}`;
+  downloadCSV(`SCC_Missions_${range}_${stamp}.csv`, [header, ...data]);
+}
+
+/* =======================
+   ✅ Follow-Up actions
+   - Cancel uses modal dialog (radio reasons)
+   - Reschedule unchanged
+======================= */
+
+/* =======================
+   ✅ ELEMENT REFS (INDEX.HTML)  << ต้องอยู่ก่อน wire event
+======================= */
+
+// ===== Detail Modal =====
+const modalOverlay  = document.getElementById("modalOverlay");
+const modalTitle    = document.getElementById("modalTitle");
+const modalSub      = document.getElementById("modalSub");
+const modalBody     = document.getElementById("modalBody");
+const closeModalBtn = document.getElementById("closeModalBtn");
+
+// ===== Edit Departure Modal refs (MISSING FIX) =====
+const editOverlay    = document.getElementById("editOverlay");
+const closeEditBtn   = document.getElementById("closeEditBtn");
+const cancelEditBtn  = document.getElementById("cancelEditBtn");
+const saveEditBtn    = document.getElementById("saveEditBtn");
+const newDeparture   = document.getElementById("newDeparture");
+const reportedBy     = document.getElementById("reportedBy");
+const editTitle      = document.getElementById("editTitle");
+const editSub        = document.getElementById("editSub");
+
+// Footer buttons
+const editTimeBtn = document.getElementById("editTimeBtn");
+const editBtn     = document.getElementById("editBtn");
+const deleteBtn   = document.getElementById("deleteBtn");
+
+// ✅ NEW: Cancel button inside detail modal
+const cancelBtn   = document.getElementById("cancelBtn");
+
+// ===== Cancel Dialog =====
+const cancelOverlay    = document.getElementById("cancelOverlay");
+const cancelTitleEl    = document.getElementById("cancelTitle");
+const cancelSubEl      = document.getElementById("cancelSub");
+const closeCancelBtn   = document.getElementById("closeCancelBtn");
+const cancelCancelBtn  = document.getElementById("cancelCancelBtn");
+const confirmCancelBtn = document.getElementById("confirmCancelBtn");
+const cancelByEl = document.getElementById("cancelBy");
+
+
+// ===== Reschedule Dialog =====
+const reschedOverlay    = document.getElementById("reschedOverlay");
+const reschedTitleEl    = document.getElementById("reschedTitle");
+const reschedSubEl      = document.getElementById("reschedSub");
+const closeReschedBtn   = document.getElementById("closeReschedBtn");
+const cancelReschedBtn  = document.getElementById("cancelReschedBtn");
+const confirmReschedBtn = document.getElementById("confirmReschedBtn");
+const reschedDateEl     = document.getElementById("reschedDate");
+const reschedTimeEl     = document.getElementById("reschedTime");
+const reschedByEl       = document.getElementById("reschedBy");
+
+// ===== Top stats =====
+const total              = document.getElementById("total");
+const todayTotal         = document.getElementById("todayTotal");
+const activeToday        = document.getElementById("activeToday");
+const remainingScheduled = document.getElementById("remainingScheduled");
+const completedN         = document.getElementById("completedN");
+const cancelledN         = document.getElementById("cancelledN");
+
+// ===== Main controls =====
+const search       = document.getElementById("search");
+const statusFilter = document.getElementById("statusFilter");
+const dateFilter   = document.getElementById("dateFilter");
+
+// ===== Buttons =====
+const clearBtn      = document.getElementById("clearBtn");
+const exportMonthBtn= document.getElementById("exportMonthBtn");
+const exportYearBtn = document.getElementById("exportYearBtn");
+
+// ===== Clock =====
+const clock = document.getElementById("clock");
+
+// ===== Table titles + bodies =====
+const tableTitle     = document.getElementById("tableTitle");
+const followTitle    = document.getElementById("followTitle");
+const missionBody    = document.getElementById("missionBody");
+const followBody     = document.getElementById("followBody");
+const countNote      = document.getElementById("countNote");
+const followCountNote= document.getElementById("followCountNote");
+
+let reschedTargetId = null;
+
+/* ===== Debug warnings (optional) ===== */
+if (!modalOverlay)  console.warn("modalOverlay not found");
+if (!cancelOverlay) console.warn("cancelOverlay not found");
+if (!cancelTitleEl) console.warn("cancelTitle not found");
+if (!cancelSubEl)   console.warn("cancelSub not found");
+
+// ✅ Rename button label (Edit Departure Time -> Reschedule)
+if (editTimeBtn) editTimeBtn.textContent = "Reschedule";
+
+
+/* ===== Cancel Modal State ===== */
+let cancelTargetId = null;
+
+
+function getSelectedCancelReasonKey(){
+  const el = document.querySelector('input[name="cancelReason"]:checked');
+  return el ? String(el.value) : "";
+}
+
+function cancelReasonText(key){
+  if (key === "MISSED") return "Missed mission";
+  if (key === "ABORTED") return "Aborted mission";
+  if (key === "INCORRECT") return "Incorrect information";
+  return "";
+}
+
+function openCancelFromFollowUp(id){
+  const missions = readMissions();
+  const m = missions.find(x => String(x.id) === String(id));
+  if (!m) return;
+
+  cancelTargetId = m.id;
+
+  // header text
+  if (cancelTitleEl) cancelTitleEl.textContent = "Cancel Mission";
+  const dep = (m.details||{}).departureFromHospital || (m.details||{}).departureOriginal || "";
+  if (cancelSubEl) cancelSubEl.textContent =
+    `Mission ${m.id} • ${getMissionDateISO(m) || "-"} ${dep || ""}`.trim();
+
+  // button labels (per your final choice)
+  if (confirmCancelBtn) confirmCancelBtn.textContent = "Confirm Cancellation";
+  if (closeCancelBtn) closeCancelBtn.textContent = "Close";
+  if (cancelCancelBtn) cancelCancelBtn.textContent = "Close";
+
+  // default select = MISSED
+  const radios = [...document.querySelectorAll('input[name="cancelReason"]')];
+  radios.forEach(r => r.checked = false);
+  const def = radios.find(r => r.value === "MISSED");
+  if (def) def.checked = true;
+
+  if (cancelByEl) cancelByEl.value = "";
+  if (cancelOverlay) cancelOverlay.style.display = "flex";
+}
+
+function closeCancelModal(){
+  if (cancelOverlay) cancelOverlay.style.display = "none";
+  cancelTargetId = null;
+  if (cancelByEl) cancelByEl.value = "";
+}
+
+function openRescheduleFromFollowUp(id){
+  const missions = readMissions();
+  const m = missions.find(x => String(x.id) === String(id));
+  if (!m) return;
+
+  reschedTargetId = m.id;
+
+  // header
+  if (reschedTitleEl) reschedTitleEl.textContent = "Reschedule to Today";
+  const dep = (m.details||{}).departureFromHospital || (m.details||{}).departureOriginal || "";
+  if (reschedSubEl) reschedSubEl.textContent =
+    `Mission ${m.id} • ${getMissionDateISO(m) || "-"} ${dep || ""}`.trim();
+
+  // default date = selected day / today
+  const selectedDay = String(dateFilter.value || "").trim() || getTodayISO();
+  if (reschedDateEl) reschedDateEl.value = selectedDay;
+
+  // ✅ default time = NOW (not departure time)
+  if (reschedTimeEl) reschedTimeEl.value = nowHHMM();
+
+  if (reschedByEl) reschedByEl.value = "";
+
+  // show
+  if (reschedOverlay) reschedOverlay.style.display = "flex";
+}
+
+
+
+// ✅ alias for old call sites (prevent ReferenceError)
+function openRescheduleModal(id){
+  openRescheduleFromFollowUp(id);
+}
+
+function closeRescheduleModal(){
+  if (reschedOverlay) reschedOverlay.style.display = "none";
+  reschedTargetId = null;
+  if (reschedDateEl) reschedDateEl.value = "";
+  if (reschedTimeEl) reschedTimeEl.value = "";
+  if (reschedByEl) reschedByEl.value = "";
+}
+
+
+/* ✅ keep existing button calls working (table follow-up uses this) */
+function cancelFromFollowUp(id){
+  openCancelFromFollowUp(id);
+}
+
+/* =======================
+   ✅ Wire Cancel Dialog buttons
+======================= */
+
+// Close buttons
+if (closeCancelBtn) closeCancelBtn.addEventListener("click", closeCancelModal);
+if (cancelCancelBtn) cancelCancelBtn.addEventListener("click", closeCancelModal);
+
+// click outside dialog => close only
+if (cancelOverlay){
+  cancelOverlay.addEventListener("click", (e)=>{ if (e.target === cancelOverlay) closeCancelModal(); });
+}
+
+// =======================
+// ✅ Wire Reschedule Dialog buttons
+// =======================
+
+// Close buttons
+if (closeReschedBtn) closeReschedBtn.addEventListener("click", closeRescheduleModal);
+if (cancelReschedBtn) cancelReschedBtn.addEventListener("click", closeRescheduleModal);
+
+// click outside dialog => close only
+if (reschedOverlay){
+  reschedOverlay.addEventListener("click", (e)=>{ if (e.target === reschedOverlay) closeRescheduleModal(); });
+}
+
+
+/* ✅ Confirm Cancellation = save + close cancel dialog + close detail modal */
+if (confirmCancelBtn){
+  confirmCancelBtn.addEventListener("click", () => {
+    if (!cancelTargetId) return;
+
+    const key = getSelectedCancelReasonKey();
+    if (!key){
+      alert("กรุณาเลือกเหตุผลการ Cancel");
+      return;
+    }
+const who = String(cancelByEl?.value || "").trim();
+if (!who){
+  alert("กรุณาใส่ชื่อผู้แจ้ง (Cancelled by)");
+  return;
+}
+    const missions = readMissions();
+    const idx = missions.findIndex(x => String(x.id) === String(cancelTargetId));
+    if (idx < 0) return;
+
+    const m = missions[idx];
+    const hadScheduledAt = !!getScheduledAtDateObj(m);
+
+    m.details = m.details || {};
+    m.details.cancel = m.details.cancel || {};
+
+    // store cancel record
+    m.details.cancel.cancelReasonKey = key;
+    m.details.cancel.cancelReason    = cancelReasonText(key);
+    m.details.cancel.cancelledAtISO  = nowISO();
+    m.details.cancel.from            = hadScheduledAt ? "Scheduled" : "Activated";
+    m.details.cancel.cancelledBy = who;
+
+    // ✅ NEW RULE: Cancel always => status Cancelled (reason can be MISSED / ABORTED / INCORRECT)
+const nextStatus = "Cancelled";
+
+    // status change log
+    logStatusChange(m, nextStatus, {
+  by: who,
+  source: (cancelTargetId === currentMissionId) ? "modal_cancel" : "followup_cancel",
+  note: m.details.cancel.cancelReason
+});
+
+
+    // apply status
+    m.status = nextStatus;
+    m.details.status = m.status;
+  
+
+    // ✅ ส่ง LOG ไป Google Sheet (ก่อน writeMissions)
+pushLogToSheet({
+  eventId: makeEventId_(),
+  ...buildLogBase(m),
+  eventType: "STATUS_CHANGE",
+  by: who,
+  note: `Cancel: ${m.details.cancel.cancelReasonKey || ""} - ${m.details.cancel.cancelReason || ""}`,
+}).catch(err => console.warn("log send failed (ignored)", err));
+
+
+// save
+writeMissions(missions);
+
+    // close cancel + close detail (as requested)
+    closeCancelModal();
+    if (typeof closeModal === "function") closeModal();
+
+    // refresh main table
+    render();
+  });
+}
+
+/* =======================
+   ✅ Wire "Cancel" button inside detail modal
+   (same dialog as follow-up table)
+======================= */
+if (cancelBtn){
+  cancelBtn.addEventListener("click", () => {
+    if (!currentMissionId) return;
+    openCancelFromFollowUp(currentMissionId);
+  });
+}
+
+
+/* =======================
+   ✅ Confirm Reschedule (modal)
+   - set date/time
+   - force status = Scheduled
+   - log status change
+   - apply auto preparing/delayed by Today rules
+======================= */
+if (confirmReschedBtn){
+  confirmReschedBtn.addEventListener("click", () => {
+    if (!reschedTargetId) return;
+
+    const newDate = String(reschedDateEl?.value || "").trim();
+    const newTime = String(reschedTimeEl?.value || "").trim();
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)){
+      alert("รูปแบบวันที่ไม่ถูกต้อง (ต้องเป็น YYYY-MM-DD)");
+      return;
+    }
+    if (!/^\d{2}:\d{2}$/.test(newTime)){
+      alert("รูปแบบเวลาไม่ถูกต้อง (ต้องเป็น HH:MM)");
+      return;
+    }
+    const who = String(reschedByEl?.value || "").trim();
+if (!who){
+  alert("กรุณาใส่ชื่อผู้แจ้ง (Rescheduled by)");
+  return;
+}
+
+    const missions = readMissions();
+    const idx = missions.findIndex(x => String(x.id) === String(reschedTargetId));
+    if (idx < 0) return;
+
+    const m = missions[idx];
+    m.details = m.details || {};
+
+    // keep original departure
+    const cur = String(m.details.departureFromHospital || m.details.departureOriginal || "").trim();
+    if (!m.details.departureOriginal && cur) m.details.departureOriginal = cur;
+
+    // set new schedule
+    m.date = newDate;
+    m.details.departureFromHospital = newTime;
+
+    // ✅ per rule: Reschedule => Scheduled
+    const nextStatus = "Scheduled";
+    logStatusChange(m, nextStatus, {
+  by: who,
+  source: "reschedule",
+  note: `Reschedule to ${newDate} ${newTime}`
+});
+    m.status = nextStatus;
+    m.details.status = nextStatus;
+
+    // ✅ auto preparing/delayed following Today logic
+    applyAutoStatusForTodayMission(m, newDate);
+
+    writeMissions(missions);
+
+    closeRescheduleModal();
+    render();
+  });
+}
+
+
+/* ===== Reschedule (unchanged) ===== */
+function rescheduleFromFollowUp(id){
+  const selectedDay = String(dateFilter.value || "").trim() || getTodayISO();
+  const newDate = String(prompt("Reschedule date (YYYY-MM-DD):", selectedDay) || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)){
+    alert("รูปแบบวันที่ไม่ถูกต้อง (ต้องเป็น YYYY-MM-DD)");
+    return;
+  }
+  const newTime = String(prompt("Reschedule time (HH:MM):", "09:00") || "").trim();
+  if (!/^\d{2}:\d{2}$/.test(newTime)){
+    alert("รูปแบบเวลาไม่ถูกต้อง (ต้องเป็น HH:MM)");
+    return;
+  }
+  const who = String(prompt("Rescheduled by (ชื่อผู้แจ้ง):", "") || "").trim();
+if (!who){
+  alert("ต้องใส่ชื่อผู้แจ้งทุกครั้ง");
+  return;
+}
+
+  const missions = readMissions();
+  const idx = missions.findIndex(x => String(x.id) === String(id));
+  if (idx < 0) return;
+
+  const m = missions[idx];
+  m.details = m.details || {};
+
+  const cur = String(m.details.departureFromHospital || m.details.departureOriginal || "").trim();
+  if (!m.details.departureOriginal && cur) m.details.departureOriginal = cur;
+
+  m.date = newDate;
+  m.details.departureFromHospital = newTime;
+
+  const nextStatus = "Scheduled";
+logStatusChange(m, nextStatus, {
+  by: who,
+  source: "reschedule_prompt",
+  note: `Reschedule to ${newDate} ${newTime}`
+});
+m.status = nextStatus;
+m.details.status = nextStatus;
+
+  applyAutoStatusForTodayMission(m, selectedDay);
+
+  writeMissions(missions);
+  render();
+}
+
+/* ===== main state/render ===== */
+let allMissions = [];
+let currentMissionId = null;
+
+const todayISO = toISODateLocal(new Date());
+if (dateFilter && !dateFilter.value) dateFilter.value = todayISO;
+
+function autoUpdatePreparingDelayed(){
+  // deprecated: kept for backward compatibility
+}
+
+function setStatusChangedAt_(m, atISO){
+  if (!m) return false;
+  m.details = m.details || {};
+  m.details.statusChangedAt = String(atISO || nowISO());
+  return true;
+}
+
+
+function render(){
+  allMissions = readMissions();
+
+  const selectedDay = String(dateFilter.value || "").trim() || todayISO;
+
+    // ==============================
+// ✅ Table logic (FINAL per new rules)
+//
+// Today table:
+// - Active statuses -> show ONLY if mission.date === selectedDay
+// - Completed/Cancelled -> show ONLY if statusChangedDay === selectedDay (fallback mission.date)
+//
+// Follow-up table:
+// - missions from previous days ONLY (mission.date < selectedDay)
+// - exclude Cancelled/Completed/Aborted
+// - include Activated/Delayed always (if previous day)
+// - include overdue by schedule day (if any)
+// ==============================
+
+function getRawStatusLocal(m){
+  const s1 = (m && m.status != null) ? String(m.status).trim() : "";
+  const s2 = (m && m.details && m.details.status != null) ? String(m.details.status).trim() : "";
+  return s1 || s2;
+}
+
+function isDoneStatus(st){
+  st = normStatus(st);
+  return st === "Completed" || st === "Cancelled";
+}
+
+function getStatusChangedAtISO(m){
+  const d = m?.details || {};
+
+  // 1) explicit statusChangedAt (if you add later)
+  const direct = String(m?.statusChangedAt || d?.statusChangedAt || "").trim();
+  if (direct) return direct;
+
+  // 2) Cancelled: prefer cancelledAtISO
+  const c = d.cancel || {};
+  const cancelledISO = String(c.cancelledAtISO || d.cancelledAtISO || d.cancelledAt || "").trim();
+  if (cancelledISO) return cancelledISO;
+
+  // 3) Completed: try completedAtISO / OperationStamp / steps / stamp log
+  const completedDirect = String(d.completedAtISO || d.completedAt || "").trim();
+  if (completedDirect) return completedDirect;
+
+  const op = d.OperationStamp || {};
+  const opLast = String(op.lastUpdatedAt || "").trim();
+  if (opLast) return opLast;
+
+  if (Array.isArray(op.steps) && op.steps.length){
+    const lastStep = [...op.steps]
+      .filter(x => x && x.tsISO)
+      .sort((a,b)=> String(a.tsISO).localeCompare(String(b.tsISO)))
+      .pop();
+    if (lastStep?.tsISO) return String(lastStep.tsISO);
+  }
+
+  const log = Array.isArray(d.timeStampLog) ? d.timeStampLog : [];
+  if (log.length){
+    const last = [...log]
+      .filter(x => x && x.at)
+      .sort((a,b)=> String(a.at).localeCompare(String(b.at)))
+      .pop();
+    if (last?.at) return String(last.at);
+  }
+
+  return "";
+}
+
+function getStatusChangedDayISO(m){
+  const iso = getStatusChangedAtISO(m);
+  return isoToISODate(iso) || "";
+}
+
+// ✅ Today Missions (NO carry-over for active)
+let todayMissions = allMissions.filter(m => {
+  const st = normStatus(getRawStatusLocal(m));
+  if (st === "Aborted") return false;
+
+  const missionDay = getMissionDateISO(m);
+  if (!missionDay) return false;
+
+  if (isDoneStatus(st)){
+    const changedDay = getStatusChangedDayISO(m) || missionDay; // fallback older records
+    return changedDay === selectedDay;
+  }
+
+  // ✅ ACTIVE: show ONLY missions of selectedDay
+  return missionDay === selectedDay;
+});
+
+// ✅ Follow-up Missions = moved from previous days ONLY
+const followMissions = allMissions.filter(m => {
+  const st = normStatus(getRawStatusLocal(m));
+  if (["Cancelled","Completed","Aborted"].includes(st)) return false;
+
+  const missionDay = getMissionDateISO(m);
+  if (!missionDay) return false;
+
+  // ✅ must be previous days only
+  if (missionDay >= selectedDay) return false;
+
+  // Activated/Delayed from previous days => follow-up
+  if (["Activated","Delayed"].includes(st)) return true;
+
+  // Overdue by schedule day (if any) => follow-up
+  const dt = getScheduledAtDateObj(m);
+  if (dt){
+    const schedDay = toISODateLocal(dt);
+    if (schedDay < selectedDay) return true;
+  }
+
+  return false;
+});
+
+  // ==============================
+  // ✅ TOP STATS (based on Today Missions effective day)
+  // ==============================
+  total.innerText = allMissions.length;
+
+  todayTotal.innerText = todayMissions.length;
+
+  activeToday.innerText = todayMissions.filter(m => {
+    const s = normStatus(getRawStatus(m));
+    return ["Preparing","Delayed","Transporting","Returning"].includes(s);
+  }).length;
+
+  remainingScheduled.innerText = todayMissions.filter(m => normStatus(getRawStatus(m)) === "Scheduled").length;
+  completedN.innerText = todayMissions.filter(m => normStatus(getRawStatus(m)) === "Completed").length;
+  cancelledN.innerText = todayMissions.filter(m => normStatus(getRawStatus(m)) === "Cancelled").length;
+
+  // Titles
+  const titleDate = new Date(selectedDay + "T00:00:00");
+  tableTitle.innerText =
+    `Today Missions: ${titleDate.toLocaleDateString("th-TH", { year:"numeric", month:"short", day:"numeric" })}`;
+
+  // ==============================
+  // ✅ FILTERS (apply to both tables)
+  // ==============================
+  const q = search.value.trim().toLowerCase();
+  const status = statusFilter.value;
+
+  function applyCommonFilters(list){
+    let rows = list;
+
+    if (status !== "ALL"){
+      rows = rows.filter(m => normStatus(m.status) === status);
+    }
+    if (q){
+      rows = rows.filter(m => {
+        const ft = getFromTo(m);
+        const d = m.details || {};
+        const dep = d.departureFromHospital || d.departureOriginal || "";
+        const blob = [
+          m.id,
+          getTypeLabelForTable(m),
+          m.type, m.typeDisplay, m.typeKey,
+          dep,
+          ft.from, ft.to,
+          m.notes, m.status
+        ].join(" ").toLowerCase();
+        return blob.includes(q);
+      });
+    }
+    return rows;
+  }
+
+  // ==============================
+  // ✅ Today Missions sorting
+  // Sort by time(scheduledAt) asc
+  // ==============================
+  let todayRows = applyCommonFilters(todayMissions);
+
+function statusRankToday(st){
+  st = normStatus(st);
+
+  // 1) Preparing
+  if (st === "Preparing") return 1;
+
+  // 2) Delayed
+  if (st === "Delayed") return 2;
+
+  // 3) Transporting + Returning (รวมหมวดเดียวกัน)
+  if (st === "Transporting" || st === "Returning") return 3;
+
+  // (เผื่อไว้) Scheduled / Pending ยังอยู่ใน Today table
+  if (st === "Scheduled") return 4;
+  if (st === "Pending") return 5;
+
+  // 4) Activated
+  if (st === "Activated") return 6;
+
+  // 5) Completed
+  if (st === "Completed") return 7;
+
+  // 6) Cancelled
+  if (st === "Cancelled") return 8;
+
+  // อื่น ๆ ไปท้าย
+  return 99;
+}
+
+function timeKeyHHMM(m){
+  // ใช้เวลา departure (scheduled time) เป็นตัวเรียง “น้อยไปมาก”
+  const t = getScheduledAtTimeHHMM(m) || "";
+  return /^\d{2}:\d{2}$/.test(t) ? t : "99:99"; // ไม่มีเวลา -> ไปท้ายในหมวดเดียวกัน
+}
+
+todayRows.sort((a,b)=>{
+  const ra = statusRankToday(getRawStatus(a));
+  const rb = statusRankToday(getRawStatus(b));
+  if (ra !== rb) return ra - rb;
+
+  const ta = timeKeyHHMM(a);
+  const tb = timeKeyHHMM(b);
+  if (ta !== tb) return ta.localeCompare(tb);
+
+  // tie-breaker: Mission ID
+  return String(a.id ?? "").localeCompare(String(b.id ?? ""));
+});
+
+  if (!todayRows.length){
+    missionBody.innerHTML = `<tr><td colspan="8" class="muted">No missions found.</td></tr>`;
+    countNote.innerText = "";
+  } else {
+    missionBody.innerHTML = todayRows.map(m => {
+      const typeShort = getTypeLabelForTable(m);
+      const ft = getFromTo(m);
+
+      // ✅ FIX: อ่าน status จาก m
+      const s = normStatus(getRawStatus(m));
+
+      const editOk = canEditDeparture(m);
+
+      return `
+        <tr>
+          <td><strong>${escapeHtml(m.id ?? "-")}</strong></td>
+          <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
+          <td>${formatDepartureCell(m)}</td>
+          </td>
+          <td title="${escapeHtml(typeShort)}">${escapeHtml(typeShort)}</td>
+          <td>${escapeHtml(ft.from || "-")}</td>
+          <td>${escapeHtml(ft.to || "-")}</td>
+
+          <td>
+  <div class="statusCell">
+    <span class="badge ${badgeClassFromStatus(m)}">${escapeHtml(s)}</span>
+    ${getStatusIconsHTML(s)}
+  </div>
+</td>
+
+
+          <td><button class="btn light" onclick="openDetails('${escapeHtml(m.id)}')">Details</button></td>
+        </tr>
+      `;
+    }).join("");
+
+    countNote.innerText = `Showing ${todayRows.length} mission(s)`;
+  }
+
+  // ==============================
+  // ✅ Follow-Up sorting
+  // ==============================
+  let followRows = applyCommonFilters(followMissions);
+
+  function followSortKey(m){
+    const dt = getScheduledAtDateObj(m);
+    if (!dt){
+      const rd = getRequestDateISO(m) || "9999-12-31";
+      return { day: rd, time: "" };
+    }
+    return { day: toISODateLocal(dt), time: getScheduledAtTimeHHMM(m) || "" };
+  }
+
+  followRows.sort((a,b)=> {
+    const ka = followSortKey(a);
+    const kb = followSortKey(b);
+    if (ka.day !== kb.day) return String(ka.day).localeCompare(String(kb.day));
+    return String(ka.time).localeCompare(String(kb.time));
+  });
+
+  if (!followRows.length){
+    followBody.innerHTML = `<tr><td colspan="8" class="muted">No follow-up missions.</td></tr>`;
+    followCountNote.innerText = "";
+  } else {
+    followBody.innerHTML = followRows.map(m => {
+      const typeShort = getTypeLabelForTable(m);
+      const ft = getFromTo(m);
+
+      const s = normStatus(getRawStatus(m));
+
+      const dt = getScheduledAtDateObj(m);
+      const schedTxt = dt
+        ? `${toISODateLocal(dt)} ${getScheduledAtTimeHHMM(m) || ""}`.trim()
+        : `<span class="muted">-</span>`;
+
+      return `
+        <tr>
+          <td>
+            <strong style="cursor:pointer;" onclick="openDetails('${escapeHtml(m.id)}')">${escapeHtml(m.id ?? "-")}</strong>
+          </td>
+          <td>${escapeHtml(getRequestDateISO(m) || "-")}</td>
+          <td>${typeof schedTxt === "string" ? schedTxt : schedTxt}</td>
+          <td title="${escapeHtml(typeShort)}">${escapeHtml(typeShort)}</td>
+          <td>${escapeHtml(ft.from || "-")}</td>
+          <td>${escapeHtml(ft.to || "-")}</td>
+
+         <td>
+  <div class="statusCell">
+    <span class="badge ${badgeClassFromStatus(m)}">${escapeHtml(s)}</span>
+    ${getStatusIconsHTML(s)}
+  </div>
+</td>
+
+
+          <td>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn danger tiny" onclick="openCancelFromFollowUp('${escapeHtml(m.id)}')">Cancel</button>
+              <button class="btn secondary tiny" onclick="openRescheduleFromFollowUp('${escapeHtml(m.id)}')">Reschedule</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    followCountNote.innerText = `Showing ${followRows.length} follow-up mission(s)`;
+  }
+}
+
+/* ===== realtime refresh open details ===== */
+function refreshOpenDetailsIfAny(){
+  if (!currentMissionId) return;
+
+  const missions = readMissions();
+  const m = missions.find(x => String(x.id) === String(currentMissionId));
+  if (!m) return;
+
+  window.__detailMission = m;
+
+  modalTitle.textContent = `Mission ${m.id}`;
+  const dep = (m.details||{}).departureFromHospital || (m.details||{}).departureOriginal || "";
+  const sub = [
+    `${getMissionDateISO(m) || "-"} ${dep||""}`.trim(),
+    (m.typeDisplay || m.type || "").trim()
+  ].filter(Boolean).join(" • ");
+  modalSub.textContent = sub;
+
+  modalBody.innerHTML = renderDetails(m);
+
+  // ✅ allow reschedule for almost all (including Activated)
+const st = normStatus(getRawStatus(m));
+const allow = !["Completed","Cancelled","Aborted"].includes(st);
+
+editTimeBtn.disabled = !allow;
+editTimeBtn.style.opacity = allow ? "1" : "0.45";
+editTimeBtn.style.cursor = allow ? "pointer" : "not-allowed";
+editTimeBtn.title = allow ? "" : "Not allowed for Completed/Cancelled/Aborted";
+}
+
+/* ===== details modal control ===== */
+function openDetails(id){
+  const m = allMissions.find(x => String(x.id) === String(id));
+  if (!m) return;
+
+  currentMissionId = m.id;
+  window.__detailMission = m;
+
+  modalTitle.textContent = `Mission ${m.id}`;
+  const dep = (m.details||{}).departureFromHospital || (m.details||{}).departureOriginal || "";
+  const sub = [
+    `${getMissionDateISO(m) || "-"} ${dep||""}`.trim(),
+    (m.typeDisplay || m.type || "").trim()
+  ].filter(Boolean).join(" • ");
+  modalSub.textContent = sub;
+
+  modalBody.innerHTML = renderDetails(m);
+  modalOverlay.style.display = "flex";
+
+  // ✅ allow reschedule for almost all (including Activated)
+const st = normStatus(getRawStatus(m));
+const allow = !["Completed","Cancelled","Aborted"].includes(st);
+
+editTimeBtn.disabled = !allow;
+editTimeBtn.style.opacity = allow ? "1" : "0.45";
+editTimeBtn.style.cursor = allow ? "pointer" : "not-allowed";
+editTimeBtn.title = allow ? "" : "Not allowed for Completed/Cancelled/Aborted";
+}
+
+
+function closeModal(){
+  modalOverlay.style.display = "none";
+  modalBody.innerHTML = "";
+  currentMissionId = null;
+  window.__detailMission = null;
+}
+if (closeModalBtn) closeModalBtn.addEventListener("click", closeModal);
+modalOverlay.addEventListener("click", (e) => { if (e.target === modalOverlay) closeModal(); });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape"){
+    if (editOverlay.style.display === "flex") closeEditModal();
+    else if (modalOverlay.style.display === "flex") closeModal();
+  }
+});
+
+editBtn.addEventListener("click", () => {
+  if (!currentMissionId) return;
+  location.href = `form.html?edit=${encodeURIComponent(currentMissionId)}`;
+});
+
+// ✅ Cancel from modal (same dialog + logic as Follow-up)
+cancelBtn.addEventListener("click", () => {
+  if (!currentMissionId) return;
+  openCancelFromFollowUp(currentMissionId);
+});
+
+deleteBtn.addEventListener("click", () => {
+  if (!currentMissionId) return;
+  if (!confirm(`ยืนยันลบ mission ${currentMissionId} ใช่ไหม?`)) return;
+
+  const arr = readMissions().filter(m => String(m.id) !== String(currentMissionId));
+  writeMissions(arr);
+  closeModal();
+  render();
+});
+
+/* ===== edit departure modal logic ===== */
+let editTargetId = null;
+
+function openEditDeparture(id){
+  const missions = readMissions();
+  const m = missions.find(x => String(x.id) === String(id));
+  if (!m) return;
+
+  if (!canEditDeparture(m)){
+    alert("แก้เวลาได้เฉพาะ status: Scheduled / Preparing / Delayed");
+    return;
+  }
+
+  editTargetId = m.id;
+
+  const p = m.details || {};
+  const cur = p.departureFromHospital || p.departureOriginal || "";
+  newDeparture.value = cur || "";
+  reportedBy.value = "";
+
+  editTitle.textContent = `Edit Departure Time`;
+  editSub.textContent = `Mission ${m.id} • Status: ${normStatus(m.status)}`;
+
+  editOverlay.style.display = "flex";
+}
+function closeEditModal(){
+  editOverlay.style.display = "none";
+  editTargetId = null;
+  reportedBy.value = "";
+}
+closeEditBtn.addEventListener("click", closeEditModal);
+cancelEditBtn.addEventListener("click", closeEditModal);
+editOverlay.addEventListener("click", (e)=>{ if (e.target === editOverlay) closeEditModal(); });
+
+saveEditBtn.addEventListener("click", () => {
+  if (!editTargetId) return;
+
+  const newTime = String(newDeparture.value || "").trim();
+  const who = String(reportedBy.value || "").trim();
+
+  if (!newTime){
+    alert("กรุณาใส่เวลาใหม่");
+    return;
+  }
+  if (!who){
+    alert("กรุณาใส่ 'รับแจ้งจากใคร'");
+    return;
+  }
+
+  const missions = readMissions();
+  const idx = missions.findIndex(x => String(x.id) === String(editTargetId));
+  if (idx < 0) return;
+
+  const m = missions[idx];
+  if (!canEditDeparture(m)){
+    alert("แก้เวลาได้เฉพาะ status: Scheduled / Preparing / Delayed");
+    closeEditModal();
+    return;
+  }
+
+  m.details = m.details || {};
+  const cur = m.details.departureFromHospital || m.details.departureOriginal || "";
+
+  if (!m.details.departureOriginal && cur){
+    m.details.departureOriginal = cur;
+  }
+  if (!m.details.departureOriginal && !cur){
+    m.details.departureOriginal = newTime;
+  }
+
+  if (!Array.isArray(m.details.departureChangeLog)){
+    m.details.departureChangeLog = [];
+  }
+
+  m.details.departureFromHospital = newTime;
+
+  if (cur !== newTime){
+    m.details.departureChangeLog.push({
+      from: cur || "",
+      to: newTime,
+      reportedBy: who,
+      at: nowISO()
+    });
+  } else {
+    alert("เวลาใหม่เหมือนเดิม (ไม่มีการเปลี่ยนแปลง)");
+    return;
+  }
+
+  autoUpdatePreparingDelayed(missions);
+  writeMissions(missions);
+
+  closeEditModal();
+  if (modalOverlay.style.display === "flex" && currentMissionId){
+    const keep = currentMissionId;
+    closeModal();
+    render();
+    openDetails(keep);
+  } else {
+    render();
+  }
+});
+
+editTimeBtn.addEventListener("click", () => {
+  if (!currentMissionId) return;
+  openRescheduleFromFollowUp(currentMissionId); // ✅ same as follow-up Reschedule
+});
+
+/* ===== controls ===== */
+search.addEventListener("input", render);
+statusFilter.addEventListener("change", render);
+dateFilter.addEventListener("change", render);
+
+clearBtn.addEventListener("click", () => {
+  if (!confirm("คุณต้องการล้างข้อมูลทั้งหมดใน browser นี้ใช่ไหม?")) return;
+  if (!confirm("ยืนยันอีกครั้ง: ล้างข้อมูลทั้งหมดจริงไหม? (ย้อนกลับไม่ได้)")) return;
+  writeMissions([]);
+  render();
+});
+
+exportMonthBtn.addEventListener("click", () => exportCSV("month"));
+exportYearBtn.addEventListener("click", () => exportCSV("year"));
+
+setInterval(()=> clock.innerText = new Date().toLocaleTimeString("th-TH"), 1000);
+setInterval(render, 60 * 1000);
+window.addEventListener("focus", render);
+
+/* ===== Realtime listener (operation.html will notify) ===== */
+onSyncMessage(() => {
+  render();
+  if (modalOverlay.style.display === "flex"){
+    refreshOpenDetailsIfAny();
+  }
+});
+
+// ✅ Auto refresh when missions updated (cross-tab / cross-page)
+(function(){
+  try{
+    if ("BroadcastChannel" in window){
+      const ch = new BroadcastChannel("SCC_SYNC_V1");
+      ch.onmessage = () => render();
+    }
+  }catch{}
+
+  window.addEventListener("storage", (e) => {
+    if (e.key === "SCC_MISSIONS_V1" || e.key === "__SCC_SYNC_PING__") render();
+  });
+})();
+
+render();
+
+</script>
+
+</body>
+</html>
