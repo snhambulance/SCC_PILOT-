@@ -1,3 +1,4 @@
+
 <!-- =========================
 OPERATION.HTML (copy + paste) ✅ FINAL — FIXED (no boot-dup / no stray code)
 ✅ Guaranteed:
@@ -647,22 +648,30 @@ tbody tr:hover{ background:#fafcff; }
     width:100%;
   }
 }
-
-/* ✅ Allow 2 lines for Mission Type / From / To */
+/* ✅ ให้ td ยังเป็น table-cell ตามปกติ */
 td.col-type,
 td.col-from,
 td.col-to{
+  white-space: normal !important;   /* อนุญาตให้ขึ้นบรรทัดใหม่ */
+  overflow: hidden;                 /* กันล้น */
+  vertical-align: top;
+}
+
+/* ✅ clamp ทำที่ div ด้านในเท่านั้น */
+.clamp2{
   white-space: normal !important;
   line-height: 1.25;
 
-  /* 2-line clamp */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 
   overflow: hidden;
   text-overflow: ellipsis;
+
+  word-break: break-word;           /* กันคำยาว ๆ ดันพัง */
 }
+
 
 .clamp2{
   white-space: normal !important;
