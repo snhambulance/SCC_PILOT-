@@ -1,4 +1,3 @@
-
 <!-- =========================
 OPERATION.HTML (copy + paste) ✅ FINAL — FIXED (no boot-dup / no stray code)
 ✅ Guaranteed:
@@ -648,39 +647,87 @@ tbody tr:hover{ background:#fafcff; }
     width:100%;
   }
 }
-/* ✅ ให้ td ยังเป็น table-cell ตามปกติ */
+
+/* td ต้องเป็น table-cell ปกติ */
 td.col-type,
 td.col-from,
 td.col-to{
-  white-space: normal !important;   /* อนุญาตให้ขึ้นบรรทัดใหม่ */
-  overflow: hidden;                 /* กันล้น */
+  white-space: normal;
+  overflow: hidden;
   vertical-align: top;
 }
 
-/* ✅ clamp ทำที่ div ด้านในเท่านั้น */
+.clamp1{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 .clamp2{
-  white-space: normal !important;
-  line-height: 1.25;
-
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  word-break: break-word;           /* กันคำยาว ๆ ดันพัง */
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  line-height:1.25;
 }
 
 
-.clamp2{
-  white-space: normal !important;
-  line-height: 1.25;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* ===== Column width (เหมือน operation.html) ===== */
+
+/* Mission ID */
+th:nth-child(1),
+td:nth-child(1){
+  min-width: 100px;
+  white-space: nowrap;
+  font-weight: 900;
+}
+
+/* Date */
+th:nth-child(2), 
+td:nth-child(2){
+  min-width: 80px;
+  white-space: nowrap;
+}
+
+/* Mission Type */
+th:nth-child(4),
+td:nth-child(4){
+  min-width: 160px;
+}
+
+/* From */
+th:nth-child(5), 
+td:nth-child(5){
+  min-width: 300px;
+}
+
+/* To */
+th:nth-child(6), 
+td:nth-child(6){
+  min-width: 300px;
+}
+
+/* Actions */
+th:nth-child(8), 
+td:nth-child(8){
+  min-width: 260px;
+  white-space: nowrap;
+}
+
+/* ===== Alignment ===== */
+table th,
+table td{
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Text-heavy columns = left */
+table th:nth-child(4),
+table td:nth-child(4),
+table th:nth-child(5),
+table td:nth-child(5),
+table th:nth-child(6),
+table td:nth-child(6){
+  text-align: left;
 }
 
 
@@ -740,10 +787,10 @@ td.col-to{
       <table>
         <thead>
           <tr>
-            <th style="width:100px;">Mission ID</th>
-            <th style="width:80px;">Date</th>
-            <th style="width:80px;">Departure</th>
-            <th style="width:120px;">Mission Type</th>
+            <th style="width:80px;">Mission ID</th>
+            <th style="width:60px;">Date</th>
+            <th style="width:60px;">Departure</th>
+            <th style="width:180px;">Mission Type</th>
             <th style="width:140px;">From</th>
             <th style="width:140px;">To</th>
             <th style="width:100px;">Status</th>
@@ -1810,111 +1857,37 @@ function renderTable(rows, selectedDate){
   const isTodayView = (String(selectedDate || "") === todayISO);
 
   // =========================
-  // ไม่ใช่วันนี้ → แสดงแบบเดิม
-  // =========================
-  if (!isTodayView){
-    if (!Array.isArray(rows) || !rows.length){
-      tb.innerHTML = `<tr><td colspan="8" class="muted">No missions</td></tr>`;
-      if (cn) cn.textContent = "0 missions";
-      return;
-    }
-
-    tb.innerHTML = rows.map(m => {
-      const ft = getFromTo(m);
-      const s  = normStatus(getRawStatus(m));
-
-      return `
-        <tr>
-  <td><strong>${escapeHtml(m.id || "-")}</strong></td>
-  <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
-  <td>${formatDepartureCell(m)}</td>
-
-  <td class="col-type"><div class="clamp2">${escapeHtml(getTypeLabelForTable(m))}</div></td>
-  <td class="col-from"><div class="clamp2">${escapeHtml(ft.from || "-")}</div></td>
-  <td class="col-to"><div class="clamp2">${escapeHtml(ft.to || "-")}</div></td>
-
-  <td>
-    <div class="statusCell">
-      <span class="badge ${badgeClassFromStatus(s)}">${escapeHtml(s)}</span>
-      ${getStatusIconsHTML(s)}
-    </div>
-  </td>
-  <td>
-    <div class="actionCell">
-      <button class="btn light tiny" type="button" onclick="openDetails('${escapeHtml(m.id)}')">Details</button>
-      ${
-        (() => {
-          const st = getTableOnDutyBtnState(m);
-          return `<button class="btn pill tiny ${st.cls}" type="button" onclick="openStamp('${escapeHtml(m.id)}')">${escapeHtml(st.text)}</button>`;
-        })()
-      }
-    </div>
-  </td>
-</tr>
-      `;
-    }).join("");
-
-    if (cn) cn.textContent = `${rows.length} missions`;
+// ไม่ใช่วันนี้ → แสดงแบบเดิม
+// =========================
+if (!isTodayView){
+  if (!Array.isArray(rows) || !rows.length){
+    tb.innerHTML = `<tr><td colspan="8" class="muted">No missions</td></tr>`;
+    if (cn) cn.textContent = "0 missions";
     return;
   }
 
-  // =========================
-  // วันนี้: Active + Done (Completed/Cancelled) แบบ collapsible
-  // =========================
-  const all = Array.isArray(rows) ? rows : [];
+  tb.innerHTML = rows.map(m => {
+    const ft = getFromTo(m);
+    const s  = normStatus(getRawStatus(m));
 
-  function hasStarted(m){ return !!getStepISO(m, "actual_departure"); }
-  function isCompleted(m){ return normStatus(getRawStatus(m)) === "Completed"; }
-
-  const doneRows = all.filter(m => isCompleted(m) || isCancelled(m));
-  const activeCandidates = all.filter(m => !(isCompleted(m) || isCancelled(m)));
-
-  const todayRows = [];
-  const backlogRows = [];
-
-  activeCandidates.forEach(m => {
-    const req = getMissionDateISO(m);
-    if (req && !hasStarted(m) && req < todayISO){
-      backlogRows.push(m);
-    } else {
-      todayRows.push(m);
-    }
-  });
-
-  backlogRows.sort((a,b)=> String(getMissionDateISO(a)||"").localeCompare(String(getMissionDateISO(b)||"")));
-  doneRows.sort((a,b)=>{
-    const da = _depMinutesOfDay(a);
-    const db = _depMinutesOfDay(b);
-    if (da !== db) return da - db;
-    return String(a.id||"").localeCompare(String(b.id||""));
-  });
-
-  function headerRow(title, subText){
     return `
-      <tr style="background:#f8fafc;">
-        <td colspan="8" style="padding:10px 12px; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;">
-          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-            <div style="font-weight:900; color:#111827;">${escapeHtml(title)}</div>
-            <div class="muted" style="font-size:12px;">${escapeHtml(subText || "")}</div>
-          </div>
-        </td>
-      </tr>
-    `;
-  }
-
-  function renderMissionRow(m){
-  const ft = getFromTo(m);
-  const s  = normStatus(getRawStatus(m));
-
-  return `
       <tr>
         <td><strong>${escapeHtml(m.id || "-")}</strong></td>
         <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
         <td>${formatDepartureCell(m)}</td>
 
-        <td class="col-type"><div class="clamp2">${escapeHtml(getTypeLabelForTable(m))}</div></td>
-        <td class="col-from"><div class="clamp2">${escapeHtml(ft.from || "-")}</div></td>
-        <td class="col-to"><div class="clamp2">${escapeHtml(ft.to || "-")}</div></td>
+        <!-- ✅ Mission Type = 2 lines -->
+        <td class="col-type">
+          <div class="clamp2">${escapeHtml(getTypeLabelForTable(m))}</div>
+        </td>
+
+        <!-- ✅ From/To = 1 line -->
+        <td class="col-from">
+          <div class="clamp1">${escapeHtml(ft.from || "-")}</div>
+        </td>
+        <td class="col-to">
+          <div class="clamp1">${escapeHtml(ft.to || "-")}</div>
+        </td>
 
         <td>
           <div class="statusCell">
@@ -1922,6 +1895,7 @@ function renderTable(rows, selectedDate){
             ${getStatusIconsHTML(s)}
           </div>
         </td>
+
         <td>
           <div class="actionCell">
             <button class="btn light tiny" type="button" onclick="openDetails('${escapeHtml(m.id)}')">Details</button>
@@ -1934,10 +1908,105 @@ function renderTable(rows, selectedDate){
           </div>
         </td>
       </tr>
+    `;
+  }).join("");
+
+  if (cn) cn.textContent = `${rows.length} missions`;
+  return;
+}
+
+
+  // =========================
+// วันนี้: Active + Done (Completed/Cancelled) แบบ collapsible
+// =========================
+const all = Array.isArray(rows) ? rows : [];
+
+function hasStarted(m){ return !!getStepISO(m, "actual_departure"); }
+function isCompleted(m){ return normStatus(getRawStatus(m)) === "Completed"; }
+
+const doneRows = all.filter(m => isCompleted(m) || isCancelled(m));
+const activeCandidates = all.filter(m => !(isCompleted(m) || isCancelled(m)));
+
+const todayRows = [];
+const backlogRows = [];
+
+activeCandidates.forEach(m => {
+  const req = getMissionDateISO(m);
+  if (req && !hasStarted(m) && req < todayISO){
+    backlogRows.push(m);
+  } else {
+    todayRows.push(m);
+  }
+});
+
+backlogRows.sort((a,b)=> String(getMissionDateISO(a)||"").localeCompare(String(getMissionDateISO(b)||"")));
+doneRows.sort((a,b)=>{
+  const da = _depMinutesOfDay(a);
+  const db = _depMinutesOfDay(b);
+  if (da !== db) return da - db;
+  return String(a.id||"").localeCompare(String(b.id||""));
+});
+
+function headerRow(title, subText){
+  return `
+    <tr style="background:#f8fafc;">
+      <td colspan="8" style="padding:10px 12px; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <div style="font-weight:900; color:#111827;">${escapeHtml(title)}</div>
+          <div class="muted" style="font-size:12px;">${escapeHtml(subText || "")}</div>
+        </div>
+      </td>
+    </tr>
   `;
 }
 
-  let html = "";
+function renderMissionRow(m){
+  const ft = getFromTo(m);
+  const s  = normStatus(getRawStatus(m));
+
+  return `
+    <tr>
+      <td><strong>${escapeHtml(m.id || "-")}</strong></td>
+      <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
+      <td>${formatDepartureCell(m)}</td>
+
+      <!-- ✅ Mission Type = 2 lines -->
+      <td class="col-type">
+        <div class="clamp2">${escapeHtml(getTypeLabelForTable(m))}</div>
+      </td>
+
+      <!-- ✅ From/To = 1 line -->
+      <td class="col-from">
+        <div class="clamp1">${escapeHtml(ft.from || "-")}</div>
+      </td>
+      <td class="col-to">
+        <div class="clamp1">${escapeHtml(ft.to || "-")}</div>
+      </td>
+
+      <td>
+        <div class="statusCell">
+          <span class="badge ${badgeClassFromStatus(s)}">${escapeHtml(s)}</span>
+          ${getStatusIconsHTML(s)}
+        </div>
+      </td>
+
+      <td>
+        <div class="actionCell">
+          <button class="btn light tiny" type="button" onclick="openDetails('${escapeHtml(m.id)}')">Details</button>
+          ${
+            (() => {
+              const st = getTableOnDutyBtnState(m);
+              return `<button class="btn pill tiny ${st.cls}" type="button" onclick="openStamp('${escapeHtml(m.id)}')">${escapeHtml(st.text)}</button>`;
+            })()
+          }
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+let html = "";
+
 
   // A) Today missions
   html += headerRow("Today missions", `${todayRows.length} mission(s)`);
