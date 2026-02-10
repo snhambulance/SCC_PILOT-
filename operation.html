@@ -203,35 +203,47 @@ OPERATION.HTML (copy + paste) ✅ FINAL — FIXED (no boot-dup / no stray code)
 
 
   .tableWrap{
-    overflow:auto;
-    border-radius:14px;
-    border:1px solid #eef2f7;
-  }
-  table{
-    width:100%;
-    border-collapse:separate;
-    border-spacing:0;
-    min-width:1620px;
-    font-size:14px;
-  }
-  thead th{
-    position:sticky;
-    top:0;
-    background:#f8fafc;
-    color:#374151;
-    text-align:left;
-    padding:12px 12px;
-    border-bottom:1px solid #e5e7eb;
-    z-index:1;
-    white-space:nowrap;
-  }
-  tbody td{
-    padding:12px 12px;
-    border-bottom:1px solid #f0f2f5;
-    color:#111827;
-    vertical-align:top;
-  }
-  tbody tr:hover{ background:#fafcff; }
+  overflow-x:hidden;          /* ✅ ไม่ให้มี scroll ซ้าย/ขวา */
+  overflow-y:auto;
+  border-radius:14px;
+  border:1px solid #eef2f7;
+}
+
+table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  min-width:0;                /* ✅ เอา 1620px ออก ไม่งั้นยังไงก็ล้น */
+  table-layout:fixed;         /* ✅ บังคับให้คอลัมน์หดตามจอ */
+  font-size:14px;
+}
+
+thead th{
+  position:sticky;
+  top:0;
+  background:#f8fafc;
+  color:#374151;
+  text-align:left;
+  padding:12px 12px;
+  border-bottom:1px solid #e5e7eb;
+  z-index:1;
+  white-space:nowrap;         /* header ไม่แตกบรรทัด */
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+tbody td{
+  padding:12px 12px;
+  border-bottom:1px solid #f0f2f5;
+  color:#111827;
+  vertical-align:top;
+  white-space:nowrap;         /* ✅ กันข้อความดันจนตารางล้น */
+  overflow:hidden;
+  text-overflow:ellipsis;     /* ✅ ตัดเป็น ... */
+}
+
+tbody tr:hover{ background:#fafcff; }
+
 
   /* ===== STATUS BADGES ===== */
   .badge{
