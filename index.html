@@ -209,10 +209,10 @@
   border-bottom:1px solid #f0f2f5;
   color:#111827;
   vertical-align:top;
-  white-space:nowrap;         /* ✅ กันข้อความดันจนตารางล้น */
   overflow:hidden;
-  text-overflow:ellipsis;     /* ✅ ตัดเป็น ... */
+  text-overflow:ellipsis;
 }
+
   tbody tr:hover{ background:#fafcff; }
   .muted{ color:#6b7280; }
 
@@ -556,30 +556,35 @@
 .statusIcons.transporting{ color:#166534; }  /* เขียว */
 .statusIcons.returning{ color:#9a3412; }     /* ส้ม */
 
+/* ===== clamp helpers ===== */
+.clamp1{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.clamp2{
+  white-space:normal;
+  line-height:1.25;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* ✅ allow wrapping in these columns (2 lines) */
 td.col-type,
 td.col-from,
 td.col-to{
   white-space: normal !important;
   line-height: 1.25;
-
-  /* 2-line clamp */
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.clamp2{
-  white-space: normal !important;
-  line-height: 1.25;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+
+/* ✅ Apply only where needed */
+td.col-type{ white-space:normal !important; }  /* allow clamp2 inside */
+
 
 
 </style>
@@ -679,9 +684,9 @@ td.col-to{
       <table>
         <thead>
           <tr>
-            <th style="width:140px;">Mission ID</th>
-            <th style="width:110px;">Request Date</th>
-            <th style="width:220px;">Scheduled (if any)</th>
+            <th style="width:80px;">Mission ID</th>
+            <th style="width:100px;">Request Date</th>
+            <th style="width:140px;">Scheduled (if any)</th>
             <th style="width:260px;">Mission Type</th>
             <th>From</th>
             <th>To</th>
@@ -2678,113 +2683,162 @@ todayRows.sort((a,b)=>{
   return String(a.id ?? "").localeCompare(String(b.id ?? ""));
 });
 
-  if (!todayRows.length){
-    missionBody.innerHTML = `<tr><td colspan="8" class="muted">No missions found.</td></tr>`;
-    countNote.innerText = "";
-  } else {
-    missionBody.innerHTML = todayRows.map(m => {
-      const typeShort = getTypeLabelForTable(m);
-      const ft = getFromTo(m);
+if (!todayRows.length){
+  missionBody.innerHTML = `<tr><td colspan="8" class="muted">No missions found.</td></tr>`;
+  countNote.innerText = "";
+} else {
+  missionBody.innerHTML = todayRows.map(m => {
+  const typeShort = getTypeLabelForTable(m);
+  const ft = getFromTo(m);
+  const s = normStatus(getRawStatus(m));
 
-      // ✅ FIX: อ่าน status จาก m
-      const s = normStatus(getRawStatus(m));
+  return `
+    <tr>
+      <td><strong>${escapeHtml(m.id ?? "-")}</strong></td>
+      <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
+      <td>${formatDepartureCell(m)}</td>
 
-      const editOk = canEditDeparture(m);
+      <!-- Mission Type = 2 lines -->
+      <td class="col-type">
+        <div class="clamp2" title="${escapeHtml(typeShort)}">
+          ${escapeHtml(typeShort)}
+        </div>
+      </td>
 
-      return `
-        <tr>
-          <td><strong>${escapeHtml(m.id ?? "-")}</strong></td>
-          <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
-          <td>${formatDepartureCell(m)}</td>
-          </td>
-          <td title="${escapeHtml(typeShort)}">${escapeHtml(typeShort)}</td>
-          <td>${escapeHtml(ft.from || "-")}</td>
-          <td>${escapeHtml(ft.to || "-")}</td>
+      <!-- From = 2 lines -->
+      <td class="col-from">
+        <div class="clamp2" title="${escapeHtml(ft.from || "-")}">
+          ${escapeHtml(ft.from || "-")}
+        </div>
+      </td>
 
-          <td>
-  <div class="statusCell">
-    <span class="badge ${badgeClassFromStatus(m)}">${escapeHtml(s)}</span>
-    ${getStatusIconsHTML(s)}
-  </div>
-</td>
+      <!-- To = 2 lines -->
+      <td class="col-to">
+        <div class="clamp2" title="${escapeHtml(ft.to || "-")}">
+          ${escapeHtml(ft.to || "-")}
+        </div>
+      </td>
 
+      <td>
+        <div class="statusCell">
+          <span class="badge ${badgeClassFromStatus(m)}">${escapeHtml(s)}</span>
+          ${getStatusIconsHTML(s)}
+        </div>
+      </td>
 
-          <td><button class="btn light" onclick="openDetails('${escapeHtml(m.id)}')">Details</button></td>
-        </tr>
-      `;
-    }).join("");
+      <td>
+        <button class="btn light" type="button"
+                onclick="openDetails('${escapeHtml(m.id)}')">
+          Details
+        </button>
+      </td>
+    </tr>
+  `;
+}).join("");
 
-    countNote.innerText = `Showing ${todayRows.length} mission(s)`;
-  }
-
-  // ==============================
-  // ✅ Follow-Up sorting
-  // ==============================
-  let followRows = applyCommonFilters(followMissions);
-
-  function followSortKey(m){
-    const dt = getScheduledAtDateObj(m);
-    if (!dt){
-      const rd = getRequestDateISO(m) || "9999-12-31";
-      return { day: rd, time: "" };
-    }
-    return { day: toISODateLocal(dt), time: getScheduledAtTimeHHMM(m) || "" };
-  }
-
-  followRows.sort((a,b)=> {
-    const ka = followSortKey(a);
-    const kb = followSortKey(b);
-    if (ka.day !== kb.day) return String(ka.day).localeCompare(String(kb.day));
-    return String(ka.time).localeCompare(String(kb.time));
-  });
-
-  if (!followRows.length){
-    followBody.innerHTML = `<tr><td colspan="8" class="muted">No follow-up missions.</td></tr>`;
-    followCountNote.innerText = "";
-  } else {
-    followBody.innerHTML = followRows.map(m => {
-      const typeShort = getTypeLabelForTable(m);
-      const ft = getFromTo(m);
-
-      const s = normStatus(getRawStatus(m));
-
-      const dt = getScheduledAtDateObj(m);
-      const schedTxt = dt
-        ? `${toISODateLocal(dt)} ${getScheduledAtTimeHHMM(m) || ""}`.trim()
-        : `<span class="muted">-</span>`;
-
-      return `
-        <tr>
-          <td>
-            <strong style="cursor:pointer;" onclick="openDetails('${escapeHtml(m.id)}')">${escapeHtml(m.id ?? "-")}</strong>
-          </td>
-          <td>${escapeHtml(getRequestDateISO(m) || "-")}</td>
-          <td>${typeof schedTxt === "string" ? schedTxt : schedTxt}</td>
-          <td title="${escapeHtml(typeShort)}">${escapeHtml(typeShort)}</td>
-          <td>${escapeHtml(ft.from || "-")}</td>
-          <td>${escapeHtml(ft.to || "-")}</td>
-
-         <td>
-  <div class="statusCell">
-    <span class="badge ${badgeClassFromStatus(m)}">${escapeHtml(s)}</span>
-    ${getStatusIconsHTML(s)}
-  </div>
-</td>
-
-
-          <td>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button class="btn danger tiny" onclick="openCancelFromFollowUp('${escapeHtml(m.id)}')">Cancel</button>
-              <button class="btn secondary tiny" onclick="openRescheduleFromFollowUp('${escapeHtml(m.id)}')">Reschedule</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join("");
-
-    followCountNote.innerText = `Showing ${followRows.length} follow-up mission(s)`;
-  }
+  countNote.innerText = `Showing ${todayRows.length} mission(s)`;
 }
+
+
+  // ==============================
+// ✅ Follow-Up sorting + render (FIXED)
+// ==============================
+let followRows = applyCommonFilters(followMissions);
+
+function followSortKey(m){
+  const dt = getScheduledAtDateObj(m);
+  if (!dt){
+    const rd = getRequestDateISO(m) || "9999-12-31";
+    return { day: rd, time: "" };
+  }
+  return { day: toISODateLocal(dt), time: getScheduledAtTimeHHMM(m) || "" };
+}
+
+followRows.sort((a,b)=> {
+  const ka = followSortKey(a);
+  const kb = followSortKey(b);
+  if (ka.day !== kb.day) return String(ka.day).localeCompare(String(kb.day));
+  return String(ka.time).localeCompare(String(kb.time));
+});
+
+if (!followRows.length){
+  followBody.innerHTML = `<tr><td colspan="8" class="muted">No follow-up missions.</td></tr>`;
+  followCountNote.innerText = "";
+} else {
+
+  followBody.innerHTML = followRows.map(m => {
+  const typeShort = getTypeLabelForTable(m);
+  const ft = getFromTo(m);
+  const s = normStatus(getRawStatus(m));
+
+  const dt = getScheduledAtDateObj(m);
+  const schedTxt = dt
+    ? `${toISODateLocal(dt)} ${getScheduledAtTimeHHMM(m) || ""}`.trim()
+    : null;
+
+  return `
+    <tr>
+      <td>
+        <strong style="cursor:pointer;"
+                onclick="openDetails('${escapeHtml(m.id)}')">
+          ${escapeHtml(m.id ?? "-")}
+        </strong>
+      </td>
+
+      <td>${escapeHtml(getRequestDateISO(m) || "-")}</td>
+
+      <td>
+        ${schedTxt ? escapeHtml(schedTxt) : `<span class="muted">-</span>`}
+      </td>
+
+      <!-- Mission Type = 2 lines -->
+      <td class="col-type">
+        <div class="clamp2" title="${escapeHtml(typeShort)}">
+          ${escapeHtml(typeShort)}
+        </div>
+      </td>
+
+      <!-- From = 2 lines -->
+      <td class="col-from">
+        <div class="clamp2" title="${escapeHtml(ft.from || "-")}">
+          ${escapeHtml(ft.from || "-")}
+        </div>
+      </td>
+
+      <!-- To = 2 lines -->
+      <td class="col-to">
+        <div class="clamp2" title="${escapeHtml(ft.to || "-")}">
+          ${escapeHtml(ft.to || "-")}
+        </div>
+      </td>
+
+      <td>
+        <div class="statusCell">
+          <span class="badge ${badgeClassFromStatus(m)}">${escapeHtml(s)}</span>
+          ${getStatusIconsHTML(s)}
+        </div>
+      </td>
+
+      <td>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn danger tiny" type="button"
+                  onclick="openCancelFromFollowUp('${escapeHtml(m.id)}')">
+            Cancel
+          </button>
+          <button class="btn secondary tiny" type="button"
+                  onclick="openRescheduleFromFollowUp('${escapeHtml(m.id)}')">
+            Reschedule
+          </button>
+        </div>
+      </td>
+    </tr>
+  `;
+}).join("");
+
+  followCountNote.innerText = `Showing ${followRows.length} follow-up mission(s)`;
+}
+}
+
 
 /* ===== realtime refresh open details ===== */
 function refreshOpenDetailsIfAny(){
