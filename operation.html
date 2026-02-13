@@ -2866,6 +2866,37 @@ function __bootOperationPage(){
 })();
 </script>
 
+<script type="module">
+  // 🔹 Firebase core
+  import { initializeApp } from
+    "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+
+  // 🔹 Firestore (ที่คุณต้องใช้จริง)
+  import {
+    getFirestore,
+    collection, doc, setDoc, updateDoc, addDoc,
+    query, where, orderBy, onSnapshot,
+    serverTimestamp, Timestamp
+  } from
+    "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+  // 🔹 Firebase config (ใช้ของคุณได้ตรง ๆ)
+  const firebaseConfig = {
+    apiKey: "AIzaSyC2CZWT1jDRIs2th7x8pXI9m3Gkw8bNqVg",
+    authDomain: "pilot-scc.firebaseapp.com",
+    projectId: "pilot-scc",
+    storageBucket: "pilot-scc.firebasestorage.app",
+    messagingSenderId: "656652367033",
+    appId: "1:656652367033:web:25a53cd3c979fea69ad768"
+    // ❌ measurementId ไม่ต้องใช้
+  };
+
+  // 🔹 Initialize
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  console.log("🔥 Firebase + Firestore ready");
+</script>
 
 </body>
 </html>

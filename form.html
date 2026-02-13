@@ -413,11 +413,12 @@ input:disabled, select:disabled, textarea:disabled{
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
+<script type="module">
+  import { saveMission, updateMission } from "./firestore_bridge.js";
+  window.DB = { saveMission, updateMission };
+  console.log("DB bridge ready:", typeof window.DB?.saveMission);
+</script>
 <script>
-/* =======================
-   GLOBALS (MUST be first)
-======================= */
 const STORAGE_KEY = "SCC_MISSIONS_V1";
 
 /* ✅ IMPORTANT:
@@ -433,6 +434,9 @@ if (!missionStatusEl){
 const SYNC_KEY = "__SCC_SYNC_PING__";
 const BC_NAME  = "SCC_SYNC_V1";
 const bc = ("BroadcastChannel" in window) ? new BroadcastChannel(BC_NAME) : null;
+const DATA_SOURCE = "local";
+
+
 
 function emitSync(payload){
   try{
@@ -455,15 +459,42 @@ function readMissions(){
   }catch{ return []; }
 }
 
+
 /* ✅ writeMissions now emits sync ping */
-function writeMissions(arr, meta){
+/* ✅ writeMissions: Local OR Firestore (REAL write) */
+async function writeMissions(arr, meta){
+  const action   = meta?.action || "save";
+  const missionId= meta?.missionId || null;
+
+  // ✅ Firestore mode: เขียน Firestore จริง
+  if (DATA_SOURCE === "firestore"){
+    try{
+      // ต้องมี meta.mission หรือ missionId ที่หาใน arr ได้
+      if (meta?.mission){
+        await upsertMissionToFirestore(meta.mission);
+      } else if (missionId && Array.isArray(arr)){
+        const m = arr.find(x => String(x?.id || x?.missionId) === String(missionId));
+        if (!m) throw new Error("Mission not found for missionId=" + missionId);
+        await upsertMissionToFirestore(m);
+      } else {
+        throw new Error("No mission provided. Pass meta.mission OR meta.missionId + arr.");
+      }
+
+      // ping ให้หน้าอื่น refresh
+      emitSync({ source:"form", action, missionId });
+      return;
+    }catch(err){
+      console.error("Firestore write failed:", err);
+      alert("Save failed: " + (err?.message || err));
+      return;
+    }
+  }
+
+  // ✅ Local mode (ของเดิม)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-  emitSync({
-    source: "form",
-    action: meta?.action || "save",
-    missionId: meta?.missionId || null
-  });
+  emitSync({ source:"form", action, missionId });
 }
+
 
 function pad2(n){ return String(n).padStart(2,'0'); }
 function toISODateLocal(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
@@ -785,7 +816,8 @@ function buildDetailsFields(existingDetails = {}){
 // ✅ departureFromHospital: required เฉพาะตอน Scheduled
 if (f.required){
   if (f.id === "departureFromHospital"){
-    input.required = (String(missionStatus.value) !== "Activated");
+    input.required = (String(missionStatusEl?.value || "") !== "Activated");
+
   } else {
     input.required = true;
   }
@@ -845,69 +877,6 @@ typeKey.addEventListener("change", () => {
 date.value = toISODateLocal(new Date());
 missionStatusEl.value = "Scheduled";
 
-
-/* =======================
-   AGE SOFT-LOCK (days/months/years)
-   - fill 1 => disable the other 2 + clear values
-======================= */
-function _valNum(el){
-  if (!el) return "";
-  const v = String(el.value ?? "").trim();
-  return v;
-}
-function _hasVal(el){
-  const v = _valNum(el);
-  return v !== "" && !Number.isNaN(Number(v));
-}
-function _setDisabled(el, yes){
-  if (!el) return;
-  el.disabled = !!yes;
-  el.style.opacity = ""; // ให้ CSS จัดการหน้าตา
-}
-function applyAgeSoftLock(){
-  if (!document.getElementById("p_ageDays")) return;
-
-  const hasDays   = _hasVal(p_ageDays);
-  const hasMonths = _hasVal(p_ageMonths);
-  const hasYears  = _hasVal(p_ageYears);
-
-  if (hasDays){
-    if (_valNum(p_ageMonths) !== "") p_ageMonths.value = "";
-    if (_valNum(p_ageYears)  !== "") p_ageYears.value  = "";
-    _setDisabled(p_ageMonths, true);
-    _setDisabled(p_ageYears,  true);
-    _setDisabled(p_ageDays,   false);
-    return;
-  }
-  if (hasMonths){
-    if (_valNum(p_ageDays) !== "") p_ageDays.value = "";
-    if (_valNum(p_ageYears)!== "") p_ageYears.value = "";
-    _setDisabled(p_ageDays,  true);
-    _setDisabled(p_ageYears, true);
-    _setDisabled(p_ageMonths,false);
-    return;
-  }
-  if (hasYears){
-    if (_valNum(p_ageDays)   !== "") p_ageDays.value   = "";
-    if (_valNum(p_ageMonths) !== "") p_ageMonths.value = "";
-    _setDisabled(p_ageDays,   true);
-    _setDisabled(p_ageMonths, true);
-    _setDisabled(p_ageYears,  false);
-    return;
-  }
-
-  _setDisabled(p_ageDays,   false);
-  _setDisabled(p_ageMonths, false);
-  _setDisabled(p_ageYears,  false);
-}
-function initAgeSoftLock(){
-  if (!document.getElementById("p_ageDays")) return;
-  p_ageDays.addEventListener("input", applyAgeSoftLock);
-  p_ageMonths.addEventListener("input", applyAgeSoftLock);
-  p_ageYears.addEventListener("input", applyAgeSoftLock);
-  applyAgeSoftLock();
-}
-
 /* ========= Load edit ========= */
 function loadForEdit(missionId){
   const missions = readMissions();
@@ -925,9 +894,7 @@ function loadForEdit(missionId){
 
   id.value = m.id || "";
 
-  // ✅ IMPORTANT: do NOT use variable name "status" (can collide with window.status)
-  // Use the real element reference instead
-  const missionStatusEl = document.getElementById("missionStatus");
+  // ✅ Use the GLOBAL missionStatusEl (do NOT redeclare const here)
   if (missionStatusEl){
     missionStatusEl.value = String(m.status || "Scheduled").trim() || "Scheduled";
     missionStatusEl.disabled = true;
@@ -980,6 +947,7 @@ function loadForEdit(missionId){
 
   lockFilledFieldsForEdit(existingMissionSnapshot);
 }
+
 
 /* ========= Map pin parsing & logging ========= */
 function parseLatLngFromText(text){
@@ -1303,13 +1271,14 @@ if (missionStatusEl){
 }
 
 /* ========= Submit (FIXED + chosenStatus + ALWAYS required date+time) ========= */
-missionForm.addEventListener("submit", (e) => {
+missionForm.addEventListener("submit", async (e) => {
+
   e.preventDefault();
 
   // ✅ บังคับ required ทุกครั้งก่อน validate
   enforceDateTimeAlwaysRequired();
 
-  // ✅ ให้ browser ฟ้องช่องที่ยังไม่ครบแบบชัดเจน
+  // ✅ ให้ br'owser ฟ้องช่องที่ยังไม่ครบแบบชัดเจน
   if (!missionForm.checkValidity()){
     missionForm.reportValidity();
     return;
@@ -1487,9 +1456,25 @@ const chosenStatus = String(missionStatusEl?.value || "").trim()
     else out.push(finalMission);
   }
 
+  // ✅ 1) เขียน Firestore ก่อน (ชัวร์สุด กันเคสหาย)
+  try{
+    if (!window.DB || !window.DB.saveMission) {
+      throw new Error("DB bridge not ready (window.DB.saveMission missing)");
+    }
+    await window.DB.saveMission(finalMission.id, finalMission);
+  }catch(err){
+    console.error(err);
+    alert("บันทึกขึ้น Firestore ไม่สำเร็จ: " + (err?.message || err));
+    return; // ✅ ห้าม redirect ถ้าเซฟไม่สำเร็จ
+  }
+
+  // ✅ 2) (optional) เก็บ localStorage เป็น backup + sync ข้ามแท็บ
   writeMissions(out, { action, missionId: finalMission.id });
+
+    // ✅ 3) ค่อย redirect
   location.href = "index.html";
-});
+
+}); // ✅ ปิด missionForm submit listener ให้ครบก่อนเริ่มปุ่มอื่นๆ
 
 /* ========= Buttons ========= */
 backBtn.addEventListener("click", () => location.href = "index.html");
@@ -1502,8 +1487,8 @@ resetBtn.addEventListener("click", () => {
   if (!confirm("Clear form ทั้งหมดใช่ไหม?")) return;
 
   missionForm.reset();
-date.value = toISODateLocal(new Date());
-missionStatusEl.value = "Scheduled";
+  date.value = toISODateLocal(new Date());
+  missionStatusEl.value = "Scheduled";
 
   isEditMode = false;
   existingMissionSnapshot = null;
@@ -1519,9 +1504,10 @@ missionStatusEl.value = "Scheduled";
   buildDetailsFields({});
   initAgeSoftLock();
 
-  // ✅ กัน required หลุดหลัง reset
+  // ✅ กัน required หลุดหลัง reset (ถ้าคุณมีฟังก์ชันนี้อยู่)
   enforceDateTimeAlwaysRequired();
 });
+
 
 /* ========= INIT ========= */
 initMissionDropdown();

@@ -615,12 +615,13 @@ td.col-type{ white-space:normal !important; }  /* allow clamp2 inside */
 
 
   <div class="actionbar">
-    <div class="muted">Data source: local (form.html)</div>
+    <div class="muted">Data source:(form.html)</div>
     <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
       <button class="btn" onclick="location.href='form.html'">+ Add Mission</button>
       <button class="btn secondary" id="exportMonthBtn">Export CSV (This Month)</button>
       <button class="btn secondary" id="exportYearBtn">Export CSV (This Year)</button>
-      <button class="btn danger" id="clearBtn">Clear All</button>
+      <button class="btn danger" id="clearBtn">Go to Today</button>
+
     </div>
   </div>
 
@@ -878,6 +879,11 @@ td.col-type{ white-space:normal !important; }  /* allow clamp2 inside */
 </div>
 
 <script>
+
+window.DATA_SOURCE = "firestore";
+window.FIRESTORE_MISSIONS = [];
+
+
 /* ===== SHOW JS ERRORS ON SCREEN (copy into index + operation_line) ===== */
 (function(){
   function showErr(msg){
@@ -906,10 +912,6 @@ const SHEET_WEBAPP_URL= "https://script.google.com/macros/s/AKfycbzav0HGGsblLPw4
 const LOG_QUEUE_KEY   = "__SCC_LOG_QUEUE__";
 const SENT_KEY        = "__SCC_SENT_EVENT_IDS__"; // ✅ กันซ้ำฝั่ง client
 
-// ====== time helper (ensure exists) ======
-if (typeof window.nowISO !== "function"){
-  window.nowISO = () => new Date().toISOString();
-}
 
 // ====== event id ======
 function makeEventId_(){
@@ -1126,6 +1128,11 @@ setInterval(flushLogQueue_, 60 * 1000);
 // ✅ prune sent cache เป็นระยะ
 setInterval(()=>{ writeSentMap_(pruneSent_(readSentMap_())); }, 10 * 60 * 1000);
 
+setInterval(()=> clock.innerText = new Date().toLocaleTimeString("th-TH"), 1000);
+setInterval(render, 60 * 1000);
+window.addEventListener("focus", render);
+
+
 
 
 /* =======================
@@ -1179,10 +1186,12 @@ function emitSync(eventName, payload = {}){
   if (ch){
     try{ ch.postMessage({ eventName, payload, at: Date.now() }); }catch{}
   }
+  // ✅ ping storage ให้แท็บอื่นรู้ (ใช้ key เดียวกับ form.html)
   try{
-    localStorage.setItem("__SCC_SYNC_PING__", JSON.stringify({ eventName, payload, at: Date.now() }));
+    localStorage.setItem("__SCC_SYNC_PING__", JSON.stringify({ t: Date.now(), eventName, payload }));
   }catch{}
 }
+
 
 function onSyncMessage(handler){
   const ch = getSyncChannel();
@@ -1232,51 +1241,131 @@ function nowHHMM(){
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
+// ✅ เลือกแหล่งข้อมูล: "firestore" หรือ "local"
+// แนะนำตั้งเป็น "firestore" เมื่อเริ่มใช้ Firebase แล้ว
+
+
+function normalizeMissionInPlace_(m){
+  if (!m) return;
+  m.details = m.details || {};
+
+  const today = getTodayISO();
+
+  // ดึง status จากหลายที่ แล้ว normalize
+  const st = m.status || m.details.status || m.details.Status || "";
+  m.status = normStatus(st);
+  m.details.status = m.status; // ✅ keep in sync
+
+  // date กันหลุด
+  m.date = m.date || getMissionDateISO(m) || today;
+}
+
 function readMissions(){
+  // ✅ Firestore mode: ใช้ข้อมูลจาก listener
+  if ((window.DATA_SOURCE || "local") === "firestore"){
+    return Array.isArray(window.FIRESTORE_MISSIONS) ? window.FIRESTORE_MISSIONS : [];
+  }
+
+  // ✅ Local mode (เดิม)
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     const arr = raw ? JSON.parse(raw) : [];
     const missions = Array.isArray(arr) ? arr : [];
 
-    // ✅ HYDRATE status/date ให้พร้อมใช้ทันที
-    const today = getTodayISO();
     for (const m of missions){
-      if (!m) continue;
-      m.details = m.details || {};
-
-      // ดึง status จากหลายที่ แล้ว normalize
-      const st = m.status || m.details.status || m.details.Status || "";
-      m.status = normStatus(st);
-      m.details.status = m.status; // ✅ keep in sync
-
-      // date กันหลุด
-      m.date = m.date || getMissionDateISO(m) || today;
+      normalizeMissionInPlace_(m);
     }
-
     return missions;
   }catch{
     return [];
   }
 }
 
-function writeMissions(arr){
-  const missions = Array.isArray(arr) ? arr : [];
+async function readMissionsSourceOfTruth(){
 
-  const today = getTodayISO();
-  for (const m of missions){
-    if (!m) continue;
-    m.details = m.details || {};
-
-    // ✅ FIX: if form saved status into details, hydrate to top-level status
-    m.status = normStatus(m.status || m.details.status || m.details.Status || "");
-    m.details.status = m.status; // ✅ keep in sync
-
-    m.date = m.date || getMissionDateISO(m) || today;
+  // 1️⃣ Firestore first
+  if (window.DB?.loadAllMissions){
+    try{
+      const arr = await window.DB.loadAllMissions();
+      window.DATA_SOURCE = "firestore";
+      return Array.isArray(arr) ? arr : [];
+    }catch(err){
+      console.error("Firestore load failed:", err);
+    }
   }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(missions));
-  emitSync("MISSIONS_UPDATED", {});
+  // 2️⃣ fallback localStorage
+  window.DATA_SOURCE = "local";
+  return readMissions();
 }
+
+
+/**
+ * ✅ ใช้กับข้อมูลที่มาจาก Firestore:
+ * เรียกฟังก์ชันนี้เพื่อ normalize missions ก่อนส่งเข้า render เดิมของคุณ
+ */
+function normalizeMissionsFromFirestore(missions){
+  const arr = Array.isArray(missions) ? missions : [];
+  for (const m of arr){
+    // แปลง field จาก Firestore ให้เข้าของเดิม
+    // - missionId (doc) -> id / m.id
+    if (m && m.missionId && !m.id) m.id = String(m.missionId);
+
+    // - statusCurrent -> status
+    if (m && m.statusCurrent && !m.status) m.status = String(m.statusCurrent);
+
+    // - missionDateISO -> date (YYYY-MM-DD)
+    //   (ถ้าคุณใช้ date แบบวันอย่างเดียว)
+    if (m && m.missionDateISO && !m.date){
+      m.date = String(m.missionDateISO).slice(0, 10);
+    }
+
+    normalizeMissionInPlace_(m);
+  }
+  return arr;
+}
+
+
+// helper เดิมของคุณ
+function hydrateMissionForSave_(m){
+  if (!m) return;
+  m.details = m.details || {};
+
+  const today = getTodayISO();
+
+  // ✅ hydrate status
+  m.status = normStatus(m.status || m.details.status || m.details.Status || "");
+  m.details.status = m.status; // ✅ keep in sync
+
+  // ✅ hydrate date
+  m.date = m.date || getMissionDateISO(m) || today;
+}
+
+/* ✅ Firestore helpers (ต้องอยู่นอก writeMissions) */
+async function fsUpdateMission(missionId, eventType, by, note, patch){
+  if (typeof window.__addEventAndUpdateMission !== "function"){
+    throw new Error("Firestore bridge not ready: __addEventAndUpdateMission missing");
+  }
+  const ev = {
+    eventType: String(eventType || "UPDATE"),
+    by: String(by || ""),
+    note: String(note || ""),
+    eventAtISO: nowISO()
+  };
+  await window.__addEventAndUpdateMission(String(missionId), ev, patch || {});
+}
+
+async function fsDeleteMission(missionId){
+  if (typeof window.__deleteMission !== "function"){
+    throw new Error("Firestore bridge not ready: __deleteMission missing");
+  }
+  await window.__deleteMission(String(missionId));
+}
+
+async function writeMissions(arr){
+  throw new Error("writeMissions is disabled. System is Firestore-only.");
+}
+
 
 function normStatus(s){
   const raw = String(s ?? "").trim();
@@ -1533,67 +1622,61 @@ function getRequestDateISO(m){
   return getMissionDateISO(m) || String(m?.date || "").slice(0,10) || "";
 }
 
-/* =======================
-   ✅ Auto Status when mission is in Today table (kept)
-   Rule:
-   if (now < scheduledAt - 30 min) -> Scheduled
-   if (scheduledAt - 30 min <= now < scheduledAt) -> Preparing
-   after that -> DO NOT auto-change
-   IMPORTANT:
-   - Activated must NEVER be auto-changed
-======================= */
 function applyAutoStatusForTodayMission(m, selectedDayISO){
   if (!m) return false;
   m.details = m.details || {};
 
-  // ✅ Activated ห้าม auto เปลี่ยน
+  // ✅ Activated ห้าม auto เปลี่ยน (กันเคส activated/Activated)
   const rawStatus = String(m.status || m.details.status || "").trim();
-  if (rawStatus === "Activated") return false;
-
   const st = normStatus(rawStatus);
+  if (st === "Activated") return false;
 
-  if (["Delayed","Transporting","Completed","Cancelled","Aborted"].includes(st)) return false;
-  if (st && !["Scheduled","Preparing"].includes(st)) return false;
+  // ✅ ถ้าเป็นสถานะที่ไม่ควรถูก auto แล้ว ก็ไม่แตะ
+  // (ถ้าคุณอยากให้ Scheduled/Preparing เท่านั้นที่โดน auto ก็พอ)
+  if (["Transporting","Returning","Completed","Cancelled","Aborted"].includes(st)) return false;
 
+  // ✅ ต้องมี scheduled time (departure) ถึงจะคำนวณได้
   const dt = getScheduledAtDateObj(m);
   if (!dt) return false;
 
+  // ✅ ใช้กฎเฉพาะ mission ที่ scheduled day == selected day
   const day = toISODateLocal(dt);
   if (day !== selectedDayISO) return false;
 
   const now = new Date();
-  const diffMin = (dt - now) / 60000;
+  const diffMin = (dt - now) / 60000; // dt อยู่อนาคต = บวก, เลยเวลาแล้ว = ติดลบ
 
-    if (diffMin > 30){
-    if (m.status !== "Scheduled"){
+  // -------------------------
+  // ✅ RULES:
+  // >30 นาที  -> Scheduled
+  // 0–30 นาที -> Preparing
+  // เลยเวลา    -> Delayed
+  // -------------------------
 
-      // NOTE: โค้ด log Activated->Scheduled จะไม่เกิดอยู่แล้ว
-      // เพราะ Activated ถูก return false ไปตั้งแต่ต้น (คงไว้ได้ ไม่รบกวนของเดิม)
-      if (normStatus(m.status) === "Activated"){
-        logStatusChange(m, "Scheduled", {
-          source: "auto_today",
-          note: "Auto change by schedule time"
-        });
-      }
+  let next = null;
 
-      m.status = "Scheduled";
-      m.details.status = m.status;
-      return true;
-    }
-    return false;
+  if (diffMin > 30){
+    next = "Scheduled";
+  } else if (diffMin > 0){
+    next = "Preparing";
+  } else {
+    next = "Delayed";
   }
 
-  if (diffMin <= 30 && diffMin > 0){
-    if (m.status !== "Preparing"){
-      m.status = "Preparing";
-      m.details.status = m.status;
-      return true;
-    }
-    return false;
-  }
+  // ✅ ถ้าไม่เปลี่ยนจริง ไม่ต้องทำอะไร
+  if (normStatus(m.status) === next) return false;
 
-  return false;
+  // ✅ log + set status
+  logStatusChange(m, next, {
+    source: "auto_today",
+    note: "Auto change by schedule time"
+  });
+
+  m.status = next;
+  m.details.status = next;
+  return true;
 }
+
 
 /* =======================
    ✅ Location resolver (fallback) (unchanged)
@@ -2249,9 +2332,8 @@ if (reschedOverlay){
 }
 
 
-/* ✅ Confirm Cancellation = save + close cancel dialog + close detail modal */
 if (confirmCancelBtn){
-  confirmCancelBtn.addEventListener("click", () => {
+  confirmCancelBtn.addEventListener("click", async () => {
     if (!cancelTargetId) return;
 
     const key = getSelectedCancelReasonKey();
@@ -2259,11 +2341,13 @@ if (confirmCancelBtn){
       alert("กรุณาเลือกเหตุผลการ Cancel");
       return;
     }
-const who = String(cancelByEl?.value || "").trim();
-if (!who){
-  alert("กรุณาใส่ชื่อผู้แจ้ง (Cancelled by)");
-  return;
-}
+
+    const who = String(cancelByEl?.value || "").trim();
+    if (!who){
+      alert("กรุณาใส่ชื่อผู้แจ้ง (Cancelled by)");
+      return;
+    }
+
     const missions = readMissions();
     const idx = missions.findIndex(x => String(x.id) === String(cancelTargetId));
     if (idx < 0) return;
@@ -2274,50 +2358,47 @@ if (!who){
     m.details = m.details || {};
     m.details.cancel = m.details.cancel || {};
 
-    // store cancel record
     m.details.cancel.cancelReasonKey = key;
     m.details.cancel.cancelReason    = cancelReasonText(key);
     m.details.cancel.cancelledAtISO  = nowISO();
     m.details.cancel.from            = hadScheduledAt ? "Scheduled" : "Activated";
-    m.details.cancel.cancelledBy = who;
+    m.details.cancel.cancelledBy     = who;
 
-    // ✅ NEW RULE: Cancel always => status Cancelled (reason can be MISSED / ABORTED / INCORRECT)
-const nextStatus = "Cancelled";
+    const nextStatus = "Cancelled";
 
-    // status change log
     logStatusChange(m, nextStatus, {
-  by: who,
-  source: (cancelTargetId === currentMissionId) ? "modal_cancel" : "followup_cancel",
-  note: m.details.cancel.cancelReason
-});
+      by: who,
+      source: (cancelTargetId === currentMissionId) ? "modal_cancel" : "followup_cancel",
+      note: m.details.cancel.cancelReason
+    });
 
-
-    // apply status
     m.status = nextStatus;
-    m.details.status = m.status;
-  
+    m.details.status = nextStatus;
 
-    // ✅ ส่ง LOG ไป Google Sheet (ก่อน writeMissions)
-pushLogToSheet({
-  eventId: makeEventId_(),
-  ...buildLogBase(m),
-  eventType: "STATUS_CHANGE",
-  by: who,
-  note: `Cancel: ${m.details.cancel.cancelReasonKey || ""} - ${m.details.cancel.cancelReason || ""}`,
-}).catch(err => console.warn("log send failed (ignored)", err));
+    // ✅ Log to Sheet (เหมือนเดิม)
+    pushLogToSheet({
+      eventId: makeEventId_(),
+      ...buildLogBase(m),
+      eventType: "STATUS_CHANGE",
+      by: who,
+      note: `Cancel: ${m.details.cancel.cancelReasonKey || ""} - ${m.details.cancel.cancelReason || ""}`,
+    }).catch(err => console.warn("log send failed (ignored)", err));
 
+    // ✅ Firestore write (source of truth)
+    await fsUpdateMission(m.id, "STATUS_CHANGE", who, `Cancel: ${key}`, {
+      statusCurrent: "Cancelled",
+      status: "Cancelled",
+      details: m.details,
+      missionDateISO: getMissionDateISO(m),
+      date: getMissionDateISO(m)
+    });
 
-// save
-writeMissions(missions);
-
-    // close cancel + close detail (as requested)
     closeCancelModal();
     if (typeof closeModal === "function") closeModal();
-
-    // refresh main table
-    render();
+    // ไม่ต้อง render(); listener จะดึงใหม่เอง
   });
 }
+
 
 /* =======================
    ✅ Wire "Cancel" button inside detail modal
@@ -2330,16 +2411,8 @@ if (cancelBtn){
   });
 }
 
-
-/* =======================
-   ✅ Confirm Reschedule (modal)
-   - set date/time
-   - force status = Scheduled
-   - log status change
-   - apply auto preparing/delayed by Today rules
-======================= */
 if (confirmReschedBtn){
-  confirmReschedBtn.addEventListener("click", () => {
+  confirmReschedBtn.addEventListener("click", async () => {
     if (!reschedTargetId) return;
 
     const newDate = String(reschedDateEl?.value || "").trim();
@@ -2353,11 +2426,12 @@ if (confirmReschedBtn){
       alert("รูปแบบเวลาไม่ถูกต้อง (ต้องเป็น HH:MM)");
       return;
     }
+
     const who = String(reschedByEl?.value || "").trim();
-if (!who){
-  alert("กรุณาใส่ชื่อผู้แจ้ง (Rescheduled by)");
-  return;
-}
+    if (!who){
+      alert("กรุณาใส่ชื่อผู้แจ้ง (Rescheduled by)");
+      return;
+    }
 
     const missions = readMissions();
     const idx = missions.findIndex(x => String(x.id) === String(reschedTargetId));
@@ -2366,54 +2440,66 @@ if (!who){
     const m = missions[idx];
     m.details = m.details || {};
 
-    // keep original departure
     const cur = String(m.details.departureFromHospital || m.details.departureOriginal || "").trim();
     if (!m.details.departureOriginal && cur) m.details.departureOriginal = cur;
 
-    // set new schedule
     m.date = newDate;
     m.details.departureFromHospital = newTime;
 
-    // ✅ per rule: Reschedule => Scheduled
     const nextStatus = "Scheduled";
     logStatusChange(m, nextStatus, {
-  by: who,
-  source: "reschedule",
-  note: `Reschedule to ${newDate} ${newTime}`
-});
+      by: who,
+      source: "reschedule",
+      note: `Reschedule to ${newDate} ${newTime}`
+    });
+
     m.status = nextStatus;
     m.details.status = nextStatus;
 
-    // ✅ auto preparing/delayed following Today logic
     applyAutoStatusForTodayMission(m, newDate);
 
-    writeMissions(missions);
+    await fsUpdateMission(m.id, "RESCHEDULE", who, `Reschedule to ${newDate} ${newTime}`, {
+      missionDateISO: newDate,
+      date: newDate,
+      statusCurrent: m.status,
+      status: m.status,
+      details: m.details
+    });
 
     closeRescheduleModal();
-    render();
   });
 }
 
 
-/* ===== Reschedule (unchanged) ===== */
-function rescheduleFromFollowUp(id){
+/* ✅ Firestore-only: Reschedule from follow-up (prompt version) */
+async function rescheduleFromFollowUp(id){
+  // ✅ ถาวร: ต้องเป็น Firestore เท่านั้น
+  if (window.DATA_SOURCE !== "firestore"){
+    alert("โหมดนี้ถูกตั้งให้ใช้ Firestore เท่านั้น (DATA_SOURCE !== 'firestore')");
+    return;
+  }
+
   const selectedDay = String(dateFilter.value || "").trim() || getTodayISO();
+
   const newDate = String(prompt("Reschedule date (YYYY-MM-DD):", selectedDay) || "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)){
     alert("รูปแบบวันที่ไม่ถูกต้อง (ต้องเป็น YYYY-MM-DD)");
     return;
   }
+
   const newTime = String(prompt("Reschedule time (HH:MM):", "09:00") || "").trim();
   if (!/^\d{2}:\d{2}$/.test(newTime)){
     alert("รูปแบบเวลาไม่ถูกต้อง (ต้องเป็น HH:MM)");
     return;
   }
-  const who = String(prompt("Rescheduled by (ชื่อผู้แจ้ง):", "") || "").trim();
-if (!who){
-  alert("ต้องใส่ชื่อผู้แจ้งทุกครั้ง");
-  return;
-}
 
+  const who = String(prompt("Rescheduled by (ชื่อผู้แจ้ง):", "") || "").trim();
+  if (!who){
+    alert("ต้องใส่ชื่อผู้แจ้งทุกครั้ง");
+    return;
+  }
+
+  // ✅ ดึงจากแหล่งจริง (Firestore listener array)
   const missions = readMissions();
   const idx = missions.findIndex(x => String(x.id) === String(id));
   if (idx < 0) return;
@@ -2421,26 +2507,52 @@ if (!who){
   const m = missions[idx];
   m.details = m.details || {};
 
+  // keep original departure
   const cur = String(m.details.departureFromHospital || m.details.departureOriginal || "").trim();
   if (!m.details.departureOriginal && cur) m.details.departureOriginal = cur;
 
+  // set new schedule
   m.date = newDate;
   m.details.departureFromHospital = newTime;
 
+  // force status
   const nextStatus = "Scheduled";
-logStatusChange(m, nextStatus, {
-  by: who,
-  source: "reschedule_prompt",
-  note: `Reschedule to ${newDate} ${newTime}`
-});
-m.status = nextStatus;
-m.details.status = nextStatus;
+  logStatusChange(m, nextStatus, {
+    by: who,
+    source: "reschedule_prompt",
+    note: `Reschedule to ${newDate} ${newTime}`
+  });
+  m.status = nextStatus;
+  m.details.status = nextStatus;
 
-  applyAutoStatusForTodayMission(m, selectedDay);
+  // auto preparing ตามกฎ today (ถ้าคุณต้องการคงไว้)
+  applyAutoStatusForTodayMission(m, newDate);
 
-  writeMissions(missions);
-  render();
+  // ✅ Firestore update (event + patch)
+  try{
+    await fsUpdateMission(
+      m.id,
+      "RESCHEDULE",
+      who,
+      `Reschedule to ${newDate} ${newTime}`,
+      {
+        details: m.details,
+        date: String(m.date || "").slice(0,10),
+        missionDateISO: String(m.date || "").slice(0,10),
+        statusCurrent: m.status,
+        status: m.status
+      }
+    );
+  }catch(err){
+    console.error(err);
+    alert("บันทึกเข้า Firestore ไม่สำเร็จ (ตรวจเน็ต/สิทธิ์) กรุณาลองใหม่");
+    return;
+  }
+
+  // ✅ ไม่ต้อง render() เพราะ listener จะอัปเดตเอง
 }
+
+
 
 /* ===== main state/render ===== */
 let allMissions = [];
@@ -2462,7 +2574,11 @@ function setStatusChangedAt_(m, atISO){
 
 
 function render(){
-  allMissions = readMissions();
+  allMissions = (window.DATA_SOURCE === "firestore")
+  ? (window.FIRESTORE_MISSIONS || [])
+  : readMissions();
+
+
 
   const selectedDay = String(dateFilter.value || "").trim() || todayISO;
 
@@ -2576,6 +2692,50 @@ const followMissions = allMissions.filter(m => {
 
   return false;
 });
+
+// ✅ Auto change Scheduled->Preparing (Firestore persist)
+(async function autoStatusTick(){
+  if (window.DATA_SOURCE !== "firestore") return;
+
+  const selectedDay2 = String(dateFilter.value || "").trim() || todayISO;
+
+  for (const m of todayMissions){
+    const before = normStatus(getRawStatus(m));
+
+    const changed = applyAutoStatusForTodayMission(m, selectedDay2);
+    if (!changed) continue;
+
+    const after = normStatus(getRawStatus(m));
+    if (after === before) continue;
+
+    // ✅ กันยิงซ้ำถี่ๆ
+    const lastAt = String(m?.details?.statusChangedAt || "").trim();
+    if (lastAt){
+      const last = new Date(lastAt).getTime();
+      if (Number.isFinite(last) && (Date.now() - last) < 30_000) continue;
+    }
+
+    logStatusChange(m, after, {
+      source: "auto_today",
+      note: "Auto change by schedule time"
+    });
+
+    try{
+      await fsUpdateMission(m.id, "STATUS_AUTO", "SYSTEM", `Auto: ${before} -> ${after}`, {
+        statusCurrent: after,
+        status: after,
+        details: m.details,
+        date: getMissionDateISO(m),
+        missionDateISO: getMissionDateISO(m)
+      });
+    }catch(err){
+      console.warn("Auto status persist failed:", err);
+    }
+  }
+})();
+
+// (ต่อด้วย TOP STATS เดิมของคุณได้เลย)
+
 
   // ==============================
   // ✅ TOP STATS (based on Today Missions effective day)
@@ -2920,21 +3080,15 @@ editBtn.addEventListener("click", () => {
   location.href = `form.html?edit=${encodeURIComponent(currentMissionId)}`;
 });
 
-// ✅ Cancel from modal (same dialog + logic as Follow-up)
-cancelBtn.addEventListener("click", () => {
-  if (!currentMissionId) return;
-  openCancelFromFollowUp(currentMissionId);
-});
 
-deleteBtn.addEventListener("click", () => {
+deleteBtn.addEventListener("click", async () => {
   if (!currentMissionId) return;
   if (!confirm(`ยืนยันลบ mission ${currentMissionId} ใช่ไหม?`)) return;
 
-  const arr = readMissions().filter(m => String(m.id) !== String(currentMissionId));
-  writeMissions(arr);
+  await fsDeleteMission(currentMissionId);
   closeModal();
-  render();
 });
+
 
 /* ===== edit departure modal logic ===== */
 let editTargetId = null;
@@ -2970,7 +3124,7 @@ closeEditBtn.addEventListener("click", closeEditModal);
 cancelEditBtn.addEventListener("click", closeEditModal);
 editOverlay.addEventListener("click", (e)=>{ if (e.target === editOverlay) closeEditModal(); });
 
-saveEditBtn.addEventListener("click", () => {
+saveEditBtn.addEventListener("click", async () => {
   if (!editTargetId) return;
 
   const newTime = String(newDeparture.value || "").trim();
@@ -3024,18 +3178,42 @@ saveEditBtn.addEventListener("click", () => {
     return;
   }
 
-  autoUpdatePreparingDelayed(missions);
-  writeMissions(missions);
+ // (บรรทัดก่อนหน้านี้คุณแก้ m.details.departureFromHospital / departureChangeLog แล้ว)
 
-  closeEditModal();
-  if (modalOverlay.style.display === "flex" && currentMissionId){
-    const keep = currentMissionId;
-    closeModal();
-    render();
-    openDetails(keep);
-  } else {
-    render();
-  }
+// ❌ ไม่ต้อง autoUpdatePreparingDelayed(missions); (ถ้า DATA_SOURCE=firestore)
+// ❌ ไม่ต้อง writeMissions(missions);
+
+// ✅ Firestore: update 1 mission + add event
+try{
+  await fsUpdateMission(
+    m.id,
+    "DEPARTURE_EDIT",
+    who,
+    `Departure changed: ${cur || "-"} → ${newTime}`,
+    {
+      // สถานะส่วนใหญ่ไม่จำเป็นต้องเปลี่ยนที่นี่
+      // แต่ส่ง fields ที่คุณต้องการให้แน่ใจว่าถูกอัปเดตใน doc
+      details: m.details,
+      date: getMissionDateISO(m),
+      missionDateISO: getMissionDateISO(m),
+      statusCurrent: m.status,
+      status: m.status
+    }
+  );
+}catch(err){
+  console.error(err);
+  alert("บันทึกเข้า Firestore ไม่สำเร็จ (ตรวจเน็ต/สิทธิ์) กรุณาลองใหม่");
+  return;
+}
+
+closeEditModal();
+
+// ✅ ไม่ต้อง render/openDetails เอง เพราะ listener จะ refresh ให้
+// แต่ถ้าคุณอยากให้ modal อัปเดตทันทีแบบไม่รอ listener: เรียก refreshOpenDetailsIfAny()
+if (modalOverlay && modalOverlay.style.display === "flex" && currentMissionId){
+  if (typeof refreshOpenDetailsIfAny === "function") refreshOpenDetailsIfAny();
+}
+
 });
 
 editTimeBtn.addEventListener("click", () => {
@@ -3048,45 +3226,101 @@ search.addEventListener("input", render);
 statusFilter.addEventListener("change", render);
 dateFilter.addEventListener("change", render);
 
-clearBtn.addEventListener("click", () => {
-  if (!confirm("คุณต้องการล้างข้อมูลทั้งหมดใน browser นี้ใช่ไหม?")) return;
-  if (!confirm("ยืนยันอีกครั้ง: ล้างข้อมูลทั้งหมดจริงไหม? (ย้อนกลับไม่ได้)")) return;
-  writeMissions([]);
-  render();
+// ✅ Clear = ลบ ALL missions ใน Firestore (ไม่เรียก writeMissions)
+clearBtn.addEventListener("click", async () => {
+  if (!confirm("⚠️ ลบ ALL missions ใน Firestore จริงไหม? (ย้อนกลับไม่ได้)")) return;
+
+  try{
+    if (typeof window.__deleteAllMissions !== "function"){
+      throw new Error("__deleteAllMissions not ready (check module export + window expose)");
+    }
+    await window.__deleteAllMissions();
+    alert("ลบทั้งหมดเรียบร้อยแล้ว");
+    // ไม่ต้อง render(); listener จะอัปเดตให้เอง
+  }catch(err){
+    console.error(err);
+    alert("ลบไม่สำเร็จ: " + (err?.message || err));
+  }
 });
+
 
 exportMonthBtn.addEventListener("click", () => exportCSV("month"));
 exportYearBtn.addEventListener("click", () => exportCSV("year"));
 
-setInterval(()=> clock.innerText = new Date().toLocaleTimeString("th-TH"), 1000);
-setInterval(render, 60 * 1000);
-window.addEventListener("focus", render);
+
 
 /* ===== Realtime listener (operation.html will notify) ===== */
-onSyncMessage(() => {
+onSyncMessage(async () => {
+  // ✅ reload source-of-truth ก่อนทุกครั้งที่มี sync ping
+  window.CURRENT_MISSIONS = await readMissionsSourceOfTruth();
+
   render();
+
   if (modalOverlay.style.display === "flex"){
     refreshOpenDetailsIfAny();
   }
 });
 
-// ✅ Auto refresh when missions updated (cross-tab / cross-page)
-(function(){
-  try{
-    if ("BroadcastChannel" in window){
-      const ch = new BroadcastChannel("SCC_SYNC_V1");
-      ch.onmessage = () => render();
-    }
-  }catch{}
+console.log("fsUpdateMission ready:", typeof fsUpdateMission);
 
-  window.addEventListener("storage", (e) => {
-    if (e.key === "SCC_MISSIONS_V1" || e.key === "__SCC_SYNC_PING__") render();
-  });
+/* ===== First boot ===== */
+(async function boot(){
+  window.CURRENT_MISSIONS = await readMissionsSourceOfTruth();
+  render();
 })();
 
-render();
 
 </script>
+<script type="module">
+  import {
+    subscribeMissions48h,
+    addEventAndUpdateMission,
+    deleteMission,
+    deleteAllMissions   // ✅ เพิ่มตัวนี้
+  } from "./firebase_db.js";
+
+  // expose ให้ script ธรรมดาเรียกใช้ได้
+  window.__addEventAndUpdateMission = addEventAndUpdateMission;
+  window.__deleteMission = deleteMission;
+  window.__deleteAllMissions = deleteAllMissions;   // ✅ เพิ่มบรรทัดนี้
+  window.__subscribeMissions48h = subscribeMissions48h;
+
+
+  function mapForIndex(m){
+    return {
+      ...m,
+      id: String(m.missionId || m.id || ""),
+      status: String(m.statusCurrent || m.status || ""),
+      date: String(m.missionDateISO || m.date || "").slice(0,10),
+      details: m.details || {}
+    };
+  }
+
+  let stop = null;
+
+  function bootIndexRealtime(){
+    if (stop) return;
+    stop = subscribeMissions48h((missions) => {
+      const mapped = (Array.isArray(missions) ? missions : []).map(mapForIndex);
+      window.DATA_SOURCE = "firestore";
+      window.FIRESTORE_MISSIONS = mapped;
+
+      if (typeof window.render === "function") window.render();
+    }, (err) => {
+      console.error("Firestore listen error:", err);
+      alert("Firestore อ่านข้อมูลไม่ได้ ดู console");
+    });
+  }
+
+  bootIndexRealtime();
+</script>
+
+<script type="module">
+  import { saveMission, updateMission, loadAllMissions, listenMissions } from "./firestore_bridge.js";
+  window.DB = { saveMission, updateMission, loadAllMissions, listenMissions };
+  console.log("DB bridge ready:", typeof window.DB.saveMission, typeof window.DB.loadAllMissions);
+</script>
+
 
 </body>
 </html>
