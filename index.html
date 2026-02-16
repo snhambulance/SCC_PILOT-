@@ -1240,9 +1240,6 @@ function getMissionDateISO(m){
 }
 
 /* ===== helpers ===== */
-function pad2(n){ return String(n).padStart(2,'0'); }
-function toISODateLocal(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
-function getTodayISO(){ return toISODateLocal(new Date()); }
 
 function escapeHtml(s){
   return String(s ?? "").replace(/[&<>"']/g, m => ({
@@ -1352,31 +1349,6 @@ function hydrateMissionForSave_(m){
 
   // ✅ hydrate date
   m.date = m.date || getMissionDateISO(m) || today;
-}
-
-/* ✅ Firestore helpers (ต้องอยู่นอก writeMissions) */
-async function fsUpdateMission(missionId, eventType, by, note, patch){
-  if (typeof window.__addEventAndUpdateMission !== "function"){
-    throw new Error("Firestore bridge not ready: __addEventAndUpdateMission missing");
-  }
-  const ev = {
-    eventType: String(eventType || "UPDATE"),
-    by: String(by || ""),
-    note: String(note || ""),
-    eventAtISO: nowISO()
-  };
-  await window.__addEventAndUpdateMission(String(missionId), ev, patch || {});
-}
-
-async function fsDeleteMission(missionId){
-  if (typeof window.__deleteMission !== "function"){
-    throw new Error("Firestore bridge not ready: __deleteMission missing");
-  }
-  await window.__deleteMission(String(missionId));
-}
-
-async function writeMissions(arr){
-  throw new Error("writeMissions is disabled. System is Firestore-only.");
 }
 
 
@@ -1544,10 +1516,7 @@ function toLocalDateTime(dateISO, timeHHMM){
   d.setHours(h||0, m||0, 0, 0);
   return d;
 }
-function nowISO(){
-  const d = new Date();
-  return d.toISOString();
-}
+
 function isoToISODate(iso){
   if(!iso) return "";
   const d = new Date(iso);
@@ -3134,6 +3103,12 @@ async function render(){
   }
 }
 
+function safeRender(){
+  try{ return render(); }catch(e){ console.error(e); }
+}
+window.safeRender = safeRender;
+
+
 /* =======================
    ✅ Details modal control
 ======================= */
@@ -3367,6 +3342,38 @@ if (dateFilter) dateFilter.addEventListener("change", render);
 
 if (exportMonthBtn) exportMonthBtn.addEventListener("click", () => exportCSV("month"));
 if (exportYearBtn)  exportYearBtn.addEventListener("click", () => exportCSV("year"));
+
+
+/* =======================
+   ✅ MIDNIGHT AUTO ROLLOVER (Day change watcher)
+   - If user is viewing "today", auto-switch to new day at midnight
+   - If user selected another date, do nothing
+======================= */
+(function setupDayRollover(){
+  const dateEl = document.getElementById("dateFilter");
+  if (!dateEl) return;
+
+  // remember the day when page started (local TH time)
+  let lastDay = toISODateLocal(new Date());
+
+  // check every 20s (lightweight)
+  setInterval(() => {
+    const nowDay = toISODateLocal(new Date());
+    if (nowDay === lastDay) return;
+
+    // day changed!
+    const currentPicked = String(dateEl.value || "").trim();
+
+    // ✅ only auto-advance if user was viewing lastDay (i.e., "today")
+    // or if date is empty
+    if (!currentPicked || currentPicked === lastDay){
+      dateEl.value = nowDay;
+      safeRender();
+    }
+
+    lastDay = nowDay;
+  }, 20000);
+})();
 
 /* =======================
    ✅ Realtime listener (operation.html will notify)

@@ -2903,6 +2903,42 @@ function wireControls(){
 /* =========================================================
    BOOT (ONE ONLY ✅)
 ========================================================= */
+
+/* =========================================================
+   ✅ MIDNIGHT AUTO ROLLOVER (Day change watcher)
+   - If user is viewing "today", auto-switch to new day at midnight
+   - If user selected another date, do nothing
+   - IMPORTANT: dispatch 'change' so year-listener can switch automatically
+========================================================= */
+function setupDayRollover(){
+  if (window.__DAY_ROLLOVER_TIMER__) return; // ✅ กัน setInterval ซ้ำ
+  const dateEl = document.getElementById("dateFilter");
+  if (!dateEl) return;
+
+  let lastDay = toISODateLocal(new Date());
+
+  window.__DAY_ROLLOVER_TIMER__ = setInterval(() => {
+    const nowDay = toISODateLocal(new Date());
+    if (nowDay === lastDay) return;
+
+    const currentPicked = String(dateEl.value || "").trim();
+
+    // ✅ only auto-advance if user was viewing lastDay (i.e., "today") or empty
+    if (!currentPicked || currentPicked === lastDay){
+      dateEl.value = nowDay;
+
+      // ✅ trigger your existing "change" handler (switch Firestore year listener)
+      dateEl.dispatchEvent(new Event("change", { bubbles:true }));
+
+      // ✅ render
+      if (typeof safeRender === "function") safeRender();
+      else if (typeof render === "function") render();
+    }
+
+    lastDay = nowDay;
+  }, 20000);
+}
+
 let __BOOTED__ = false;
 
 function __startClock(){
@@ -2963,6 +2999,8 @@ function __bootOperationPage(){
   wireControls();
   wireStampUI();
   hardResetDetailButtons();   // ✅ เพิ่มบรรทัดนี้
+
+  setupDayRollover(); // ✅ เพิ่มบรรทัดนี้
 
   // ✅ ตอนเปิดหน้า
   __kickRender();

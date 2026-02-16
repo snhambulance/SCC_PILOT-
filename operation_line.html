@@ -1,21 +1,4 @@
-<!-- =========================
-OPERATION.HTML (copy + paste) ✅ FINAL (Returning badge included)
-✅ Match INDEX behavior for:
-- Mission Type display label (table)
-- From/To mapping (including HHC_PICKUP, HHC_SEND)
-- Details modal shows pins + Route buttons (Google Maps)
-✅ Keeps:
-- Read-only dashboard + Operation stamp per mission
-- Stamp Panel auto-selects pattern by typeKey
-- Saves logs into localStorage (SCC_MISSIONS_V1) under mission.details.OperationStamp
-- Realtime sync to index.html (BroadcastChannel + storage ping)
-- ISO-8601 only (tsISO)
-✅ REQUIRED LOGIC (as you asked):
-1) Stamp actual_departure -> mission.status = "Transporting"
-2) If step matches shouldBeReturning(mm, stepKey) -> mission.status = "Returning"
-3) Completed ONLY when ALL stamp steps are completed
-   AND OperationStamp.status = "Completed" (auto)
-========================= -->
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -1615,18 +1598,103 @@ function emitSync(eventName, payload = {}){
   }catch{}
 }
 
+// ✅ local ISO date for TH device time
 function pad2(n){ return String(n ?? 0).padStart(2, "0"); }
-
 function toISODateLocal(d){
   const x = (d instanceof Date) ? d : new Date(d);
   if (isNaN(x.getTime())) return "";
   return `${x.getFullYear()}-${pad2(x.getMonth()+1)}-${pad2(x.getDate())}`;
 }
+// ✅ robust: accept string ISO, Date, Firestore Timestamp-like (toDate), and fallback createdAtISO
+function _toISODateFromAny(v){
+  if (!v) return "";
+
+  // Firestore Timestamp (web SDK) often has toDate()
+  try{
+    if (typeof v === "object" && typeof v.toDate === "function"){
+      const d = v.toDate();
+      return toISODateLocal(d);
+    }
+  }catch{}
+
+  // Date object
+  if (v instanceof Date){
+    return toISODateLocal(v);
+  }
+
+  // string (YYYY-MM-DD or ISO)
+  const s = String(v ?? "").trim();
+  if (!s) return "";
+
+  // if starts with YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+
+  // try parse full ISO date-time
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return toISODateLocal(d);
+
+  return "";
+}
+
+
+// =======================
+// ✅ REQUIRED CORE HELPERS (must exist)
+// =======================
+function nowISO(){
+  return new Date().toISOString();
+}
+
+function normStatus(s){
+  const raw = String(s ?? "").trim();
+  if (!raw) return "Scheduled"; // keep index behavior
+
+  const k = raw.toLowerCase();
+
+  if (k === "activated") return "Activated";
+  if (k === "scheduled") return "Scheduled";
+  if (k === "preparing") return "Preparing";
+  if (k === "delayed") return "Delayed";
+  if (k === "transporting") return "Transporting";
+  if (k === "returning") return "Returning";
+  if (k === "completed") return "Completed";
+  if (k === "cancelled" || k === "canceled") return "Cancelled";
+  if (k === "aborted") return "Aborted";
+  if (k === "pending") return "Pending";
+
+  return raw;
+}
+
+
 function getTodayISO(){ return toISODateLocal(new Date()); }
 
+/* ✅ Robust mission date getter (INDEX standard + FS fallback) */
 function getMissionDateISO(m){
-  return String(m?.missionDateISO || m?.date || "").slice(0,10) || "";
+  const candidates = [
+    // explicit mission day fields
+    m?.missionDateISO,
+    m?.date,
+    m?.dateISO,
+    m?.missionDate,
+    m?.details?.missionDateISO,
+    m?.details?.date,
+    m?.details?.dateISO,
+    m?.details?.missionDate,
+
+    // fallbacks (so missions never disappear)
+    m?.createdAtISO,
+    m?.details?.createdAtISO,
+    m?.createdAt,            // Firestore Timestamp
+    m?.updatedAt,            // Firestore Timestamp
+    m?.lastEventAt           // Firestore Timestamp (you have this)
+  ];
+
+  for (const v of candidates){
+    const day = _toISODateFromAny(v);
+    if (day) return day;
+  }
+  return "";
 }
+
 
 function escapeHtml(s){
   return String(s ?? "").replace(/[&<>"']/g, ch => ({
@@ -1644,41 +1712,16 @@ function jsStr(s){
 }
 
 function readMissions(){
-  // 1) firestore snapshot (source of truth)
-  const fsArr = Array.isArray(window.FIRESTORE_MISSIONS) ? window.FIRESTORE_MISSIONS : [];
-
-  // ถ้าใช้ firestore และมีข้อมูลแล้ว → คืน firestore ล้วน
-  if ((window.DATA_SOURCE || "local") === "firestore" && fsArr.length){
-    return fsArr;
-  }
-
-  // 2) fallback: local cache (กันรอ snapshot / offline)
-  let localArr = [];
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const arr = raw ? JSON.parse(raw) : [];
-    localArr = Array.isArray(arr) ? arr : [];
-  }catch{ localArr = []; }
-
-  // ถ้า firestore ยังไม่มา → ใช้ local ไปก่อน
-  if ((window.DATA_SOURCE || "local") === "firestore"){
-    return localArr;
-  }
-
-  // โหมด local ล้วน
-  return localArr;
+  // ✅ Firestore is the ONLY source of truth (100%)
+  return Array.isArray(window.FIRESTORE_MISSIONS) ? window.FIRESTORE_MISSIONS : [];
 }
 
 function writeMissions(arr){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  // ✅ Firestore-only mode: do not write localStorage
+  // Keep emitSync for cross-tab refresh only (optional but harmless)
   emitSync("MISSIONS_UPDATED", {});
 }
-function nowISO(){ return new Date().toISOString(); }
 
-function normStatus(s){
-  const x = String(s ?? "").trim();
-  return x || "Scheduled";
-}
 
 /* =======================
    ✅ STATUS CHANGEL O G (shared across pages)
@@ -1687,6 +1730,8 @@ function normStatus(s){
 
 function badgeClassFromStatus(s){
   const x = normStatus(s).toLowerCase();
+
+  if (x === "activated") return "b-activated";
   if (x === "scheduled") return "b-scheduled";
   if (x === "preparing") return "b-preparing";
   if (x === "delayed") return "b-delayed";
@@ -1694,8 +1739,12 @@ function badgeClassFromStatus(s){
   if (x === "returning") return "b-returning";
   if (x === "completed") return "b-completed";
   if (x === "cancelled") return "b-cancelled";
+  if (x === "aborted") return "b-aborted";
+
   return "b-pending";
 }
+
+
 
 /* =======================
    ✅ STATUS CHANGE LOG (single source of truth)
@@ -1870,9 +1919,11 @@ function openRouteTo(side){
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-/* =======================
-   AUTO status (Scheduled/Preparing/Delayed only) + LOG
-======================= */
+/* NOTE (professional):
+   operation_line.html is READ-ONLY.
+   Do NOT auto-mutate statuses here.
+   Status changes must be done via Stamp/Cancel (human actions) or a single controller page.
+*/
 function autoUpdatePreparingDelayed(missions){
   let changed = false;
   const now = new Date();
@@ -1906,6 +1957,44 @@ function autoUpdatePreparingDelayed(missions){
 
   return changed;
 }
+
+// =======================
+// ✅ Effective status for UI (index-like criteria)
+// - does NOT write back to Firestore
+// =======================
+function getEffectiveStatusForUI(m){
+  const cur = normStatus(getRawStatusLocal(m));
+
+  // done/locked statuses never change by time
+  if (cur === "Completed" || cur === "Cancelled" || cur === "Aborted") return cur;
+
+  // only these are governed by time criteria
+  if (!["Scheduled","Preparing","Delayed","Pending"].includes(cur)) return cur;
+
+  const d = m?.details || {};
+  const dep = String(d.departureFromHospital || d.departureOriginal || "").trim();
+  const day = getMissionDateISO(m); // ✅ robust (FS-safe)
+  if (!dep || !day) return cur;
+
+  const depDT = toLocalDateTime(day, dep);
+  if (!depDT) return cur;
+
+  const now = new Date();
+  const diffMin = (depDT - now) / 60000;
+
+  // ✅ criteria (same as index/operation)
+  // Scheduled -> Preparing when <=30 min and still future
+  if ((cur === "Scheduled" || cur === "Pending") && diffMin <= 30 && diffMin > 0) return "Preparing";
+
+  // Scheduled/Preparing -> Delayed when past departure time
+  if ((cur === "Scheduled" || cur === "Preparing" || cur === "Pending") && diffMin <= 0) return "Delayed";
+
+  // Delayed -> Preparing if departure moved to future again
+  if (cur === "Delayed" && diffMin > 0) return "Preparing";
+
+  return cur;
+}
+
 
 /* =======================
    Departure cell (strike-through original)
@@ -2285,8 +2374,11 @@ let allMissions = [];
 let currentMissionId = null;
 let stampMissionId = null;
 
+window.DATA_SOURCE = window.DATA_SOURCE || "local";
+window.FIRESTORE_MISSIONS = window.FIRESTORE_MISSIONS || [];
+
 // default date filter = today
-const todayISO = new Date().toISOString().slice(0,10);
+const todayISO = getTodayISO(); // ใช้ local time (TH) ถูกต้องกว่า
 const dateFilterEl = document.getElementById("dateFilter");
 if (dateFilterEl && !dateFilterEl.value) dateFilterEl.value = todayISO;
 
@@ -2317,14 +2409,11 @@ function toggleGroup(name){ setCollapsed(name, !isCollapsed(name)); render(); }
     if (ch){
       ch.onmessage = (ev) => {
         const msg = ev?.data || {};
-        if (msg.eventName === "MISSIONS_UPDATED") render();
+        if (msg.eventName === "MISSIONS_UPDATED") safeRender();
+
       };
     }
   }catch{}
-  window.addEventListener("storage", (e) => {
-    if (!e) return;
-    if (e.key === STORAGE_KEY || e.key === "__SCC_SYNC_PING__") render();
-  });
 })();
 
 /* =======================
@@ -2378,7 +2467,9 @@ function getSelectedDayISO(){
 function getRawStatusLocal(m){
   const s1 = (m && m.status != null) ? String(m.status).trim() : "";
   const s2 = (m && m.details && m.details.status != null) ? String(m.details.status).trim() : "";
-  return s1 || s2;
+  // some docs store statusCurrent
+  const s3 = (m && m.statusCurrent != null) ? String(m.statusCurrent).trim() : "";
+  return s1 || s2 || s3;
 }
 
 function isDoneStatus(st){
@@ -2421,6 +2512,15 @@ function getStatusChangedAtISO(m){
     if (lastStep?.tsISO) return String(lastStep.tsISO);
   }
 
+  // 4) FS-friendly fallback: lastEventAt / updatedAt / createdAt
+  const fsFallback =
+    _toISODateFromAny(m?.lastEventAt) ? String(m?.lastEventAt?.toDate?.().toISOString?.() || "") :
+    _toISODateFromAny(m?.updatedAt)   ? String(m?.updatedAt?.toDate?.().toISOString?.() || "") :
+    _toISODateFromAny(m?.createdAt)   ? String(m?.createdAt?.toDate?.().toISOString?.() || "") :
+    "";
+
+  if (fsFallback) return fsFallback;
+
   const log = Array.isArray(d.timeStampLog) ? d.timeStampLog : [];
   if (log.length){
     const last = [...log]
@@ -2438,22 +2538,15 @@ function getStatusChangedDayISO(m){
   return isoToISODate(iso) || "";
 }
 
-// ===============================
-// ✅ Firestore SOURCE OF TRUTH
-// ===============================
-window.DATA_SOURCE = "firestore";
-window.FIRESTORE_MISSIONS = [];
-
-listenMissions((arr)=>{
-  console.log("🔥 Firestore missions:", arr.length);
-
-  window.FIRESTORE_MISSIONS = arr || [];
-
-  render(); // realtime refresh
-}, (err)=>{
-  console.error("Firestore listener error:", err);
-});
-
+// ✅ Global safeRender (ใช้ได้ทั้งหน้า + module + broadcast)
+function safeRender(){
+  try{
+    if (typeof render === "function") render();
+    else console.warn("render() not ready yet");
+  }catch(err){
+    console.error("render() crashed:", err);
+  }
+}
 
 /* =======================
    RENDER TABLE  ✅ SINGLE SOURCE OF TRUTH
@@ -2466,8 +2559,9 @@ function render(){
   // ✅ กัน null/undefined
   missions = Array.isArray(missions) ? missions : [];
 
-  // ✅ auto update statuses first
-  const changedByAuto = autoUpdatePreparingDelayed(missions);
+  // ✅ PRO MODE: operation_line is VIEWER only
+// ❌ Do NOT auto-mutate statuses here (to avoid divergence + loops)
+const changedByAuto = false;
 
   // ✅ ถ้า local mode: persist ลง localStorage
   if (changedByAuto && !isFirestore){
@@ -2476,13 +2570,37 @@ function render(){
   }
 
   // -----------------------
-  // ✅ TOP STATS (อิง selectedDay)
-  // -----------------------
-  const selectedDay = getSelectedDayISO();
-  const selectedYear = String(selectedDay || "").slice(0,4);
+// ✅ TOP STATS (อิง selectedDay)
+// -----------------------
+const selectedDay = getSelectedDayISO();
+const selectedYear = String(selectedDay || "").slice(0,4);
 
-  // ✅ source-of-truth + exclude deleted
-  const all = missions.filter(m => !isDeletedMission(m));
+// ✅ source-of-truth + exclude deleted
+const all = missions.filter(m => !isDeletedMission(m));
+
+/* ======================
+   🔎 DEBUG DATE FILTER
+   (temporary — remove later)
+====================== */
+console.log("[DBG] selectedDay =", selectedDay);
+
+console.log(
+  "[DBG] missions date check =",
+  all.map(m => ({
+    id: m.id,
+    status: m.status,
+
+    // fields ที่อาจใช้เป็นวัน
+    missionDateISO: m.missionDateISO,
+    date: m.date,
+    createdAtISO: m.createdAtISO,
+    detailsCreatedAtISO: m.details?.createdAtISO,
+
+    // วันที่ที่ระบบคำนวณจริง
+    computedDay: getMissionDateISO(m)
+  }))
+);
+/* ====================== */
 
   // ✅ Today table logic (match operation.html)
   const todayMissions = all.filter(m => {
@@ -2507,15 +2625,16 @@ function render(){
 
   // ✅ Stats from todayMissions
   const activeSet = new Set(["Preparing","Delayed","Transporting","Returning"]);
-  const activeToday = todayMissions.filter(m => activeSet.has(normStatus(getRawStatusLocal(m)))).length;
+const activeToday = todayMissions.filter(m => activeSet.has(getEffectiveStatusForUI(m))).length;
 
-  const remaining = todayMissions.filter(m => {
-    const s = normStatus(getRawStatusLocal(m));
-    return (s === "Scheduled" || s === "Pending");
-  }).length;
+const remaining = todayMissions.filter(m => {
+  const s = getEffectiveStatusForUI(m);
+  return (s === "Scheduled" || s === "Pending");
+}).length;
 
-  const completedToday = todayMissions.filter(m => normStatus(getRawStatusLocal(m)) === "Completed").length;
-  const cancelledToday = todayMissions.filter(m => normStatus(getRawStatusLocal(m)) === "Cancelled").length;
+const completedToday = todayMissions.filter(m => getEffectiveStatusForUI(m) === "Completed").length;
+const cancelledToday = todayMissions.filter(m => getEffectiveStatusForUI(m) === "Cancelled").length;
+
 
   const totalToday = todayMissions.length;
 
@@ -2557,8 +2676,9 @@ function render(){
 
   // ✅ status filter
 if (status !== "ALL"){
-  rows = rows.filter(m => normStatus(getRawStatusLocal(m)) === status);
+  rows = rows.filter(m => getEffectiveStatusForUI(m) === status);
 }
+
 
   if (q){
     rows = rows.filter(m => {
@@ -2608,8 +2728,9 @@ if (status !== "ALL"){
   }
 
   rows.sort((a,b)=> {
-    const sa = normStatus(getRawStatusLocal(a));
-    const sb = normStatus(getRawStatusLocal(b));
+    const sa = getEffectiveStatusForUI(a);
+const sb = getEffectiveStatusForUI(b);
+
 
     const ta = _tierRank(sa);
     const tb = _tierRank(sb);
@@ -2654,8 +2775,9 @@ if (status !== "ALL"){
 
   const completedCollapsed = isCollapsed("completed");
   const cancelledCollapsed = isCollapsed("cancelled");
-  const completedCount = rows.filter(x => _tierRank(normStatus(getRawStatusLocal(x))) === 1).length;
-  const cancelledCount = rows.filter(x => _tierRank(normStatus(getRawStatusLocal(x))) === 2).length;
+  const completedCount = rows.filter(x => _tierRank(getEffectiveStatusForUI(x)) === 1).length;
+const cancelledCount = rows.filter(x => _tierRank(getEffectiveStatusForUI(x)) === 2).length;
+
 
   function groupHeaderRow(kind, count){
     const collapsed = isCollapsed(kind);
@@ -2682,7 +2804,7 @@ if (status !== "ALL"){
   let injectedCancelledHeader = false;
 
   rows.forEach(m => {
-    const s = normStatus(getRawStatusLocal(m));
+    const s = getEffectiveStatusForUI(m);
     const tier = _tierRank(s);
 
     if (tier === 1 && !injectedCompletedHeader){
@@ -3313,40 +3435,96 @@ document.addEventListener("keydown", (e) => {
    INIT
 ======================= */
 (function init(){
+
+  /* ---------- SAFE CLOCK ---------- */
   const clockEl = document.getElementById("clock");
+
   function tick(){
-    const d = new Date();
-    if (clockEl) clockEl.textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+    try{
+      const d = new Date();
+      const p2 = (n)=> String(n ?? 0).padStart(2,"0");
+
+      if (clockEl){
+        clockEl.textContent =
+          `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+      }
+    }catch(err){
+      console.warn("clock tick error:", err);
+    }
   }
+
   tick();
-  setInterval(tick, 500);
+  setInterval(tick, 1000); // ✅ ไม่ต้องเร็วเกิน
 
-  document.getElementById("refreshBtn")?.addEventListener("click", render);
-  document.getElementById("search")?.addEventListener("input", render);
-  document.getElementById("statusFilter")?.addEventListener("change", render);
-  document.getElementById("dateFilter")?.addEventListener("change", render);
+    /* ---------- ✅ MIDNIGHT AUTO ROLLOVER ---------- */
+  (function setupDayRollover(){
+    const dateEl = document.getElementById("dateFilter");
+    if (!dateEl) return;
 
-  render();
+    let lastDay = toISODateLocal(new Date());
+
+    setInterval(() => {
+      const nowDay = toISODateLocal(new Date());
+      if (nowDay === lastDay) return;
+
+      const currentPicked = String(dateEl.value || "").trim();
+
+      // auto-advance only if user was viewing lastDay ("today") or empty
+      if (!currentPicked || currentPicked === lastDay){
+        dateEl.value = nowDay;
+        safeRender();
+      }
+
+      lastDay = nowDay;
+    }, 20000);
+  })();
+
+
+  /* ---------- UI EVENTS ---------- */
+  document.getElementById("refreshBtn")
+    ?.addEventListener("click", safeRender);
+
+  document.getElementById("search")
+    ?.addEventListener("input", safeRender);
+
+  document.getElementById("statusFilter")
+    ?.addEventListener("change", safeRender);
+
+  document.getElementById("dateFilter")
+    ?.addEventListener("change", safeRender);
+
+
+  /* ---------- FIRST RENDER ---------- */
+// Firestore mode: wait for subscribe callback
+if ((window.DATA_SOURCE || "local") !== "firestore"){
+  safeRender();
+}
+
+
 })();
 </script>
 <script type="module">
 import { subscribeMissions48h, setMissionPatch } from "./firebase_db.js";
 
 window.DB = window.DB || {};
-
-// ✅ ให้ upsertMission ใช้ "saveMission" ได้เหมือนเดิม แต่จริงๆเรียก setMissionPatch
 window.DB.saveMission = (id, missionObj) => setMissionPatch(id, missionObj);
-
-// เผื่อที่อื่นเรียกตรงๆ
 window.DB.setMissionPatch = setMissionPatch;
 
+let _lastSig = "";
+
 subscribeMissions48h((arr) => {
+  const list = Array.isArray(arr) ? arr : [];
+  const sig = String(list.length) + "|" + String(list[0]?.id || "") + "|" + String(list[list.length-1]?.id || "");
+  if (sig === _lastSig) return; // กัน callback ซ้ำแบบเนียน ๆ
+  _lastSig = sig;
+
+  console.log("[FS] subscribeMissions48h rows =", list.length, list[0]);
+
   window.DATA_SOURCE = "firestore";
-  window.FIRESTORE_MISSIONS = Array.isArray(arr) ? arr : [];
-  render(); // ✅ ดึงมาปุ๊บ render ปั๊บ
+  window.FIRESTORE_MISSIONS = list;
+  safeRender();
 });
 </script>
-
 
 
 
