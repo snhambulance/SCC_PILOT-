@@ -800,7 +800,7 @@ body{ text-size-adjust:100%; }
 /* Small refresh button */
 .refreshBtnSmall{
   padding:5px 6px;
-  height:/28px;
+  height:28px;
   min-height:26px;
   font-size:12px;
   border-radius:8px;
@@ -1625,7 +1625,7 @@ function toISODateLocal(d){
 function getTodayISO(){ return toISODateLocal(new Date()); }
 
 function getMissionDateISO(m){
-  return String(m?.date ?? "").slice(0,10) || "";
+  return String(m?.missionDateISO || m?.date || "").slice(0,10) || "";
 }
 
 function escapeHtml(s){
@@ -1644,12 +1644,31 @@ function jsStr(s){
 }
 
 function readMissions(){
+  // 1) firestore snapshot (source of truth)
+  const fsArr = Array.isArray(window.FIRESTORE_MISSIONS) ? window.FIRESTORE_MISSIONS : [];
+
+  // ถ้าใช้ firestore และมีข้อมูลแล้ว → คืน firestore ล้วน
+  if ((window.DATA_SOURCE || "local") === "firestore" && fsArr.length){
+    return fsArr;
+  }
+
+  // 2) fallback: local cache (กันรอ snapshot / offline)
+  let localArr = [];
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
-  }catch{ return []; }
+    localArr = Array.isArray(arr) ? arr : [];
+  }catch{ localArr = []; }
+
+  // ถ้า firestore ยังไม่มา → ใช้ local ไปก่อน
+  if ((window.DATA_SOURCE || "local") === "firestore"){
+    return localArr;
+  }
+
+  // โหมด local ล้วน
+  return localArr;
 }
+
 function writeMissions(arr){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
   emitSync("MISSIONS_UPDATED", {});
@@ -1665,72 +1684,6 @@ function normStatus(s){
    ✅ STATUS CHANGEL O G (shared across pages)
    - stored in m.details.statusLog[]
 ======================= */
-function ensureStatusLog(m){
-  m.details = m.details || {};
-  if (!Array.isArray(m.details.statusLog)) m.details.statusLog = [];
-  return m;
-}
-
-function logStatusChange(m, fromStatus, toStatus, meta = {}){
-  ensureStatusLog(m);
-  m.details.statusLog.push({
-    atISO: nowISO(),
-    from: String(fromStatus || ""),
-    to: String(toStatus || ""),
-    by: String(meta.by || "").trim(),
-    source: String(meta.source || "").trim(),   // e.g. "auto", "stamp", "cancel", "reschedule"
-    note: String(meta.note || "").trim(),
-    deviceId: (typeof DEVICE_ID !== "undefined") ? DEVICE_ID : ""
-  });
-
-  // กัน log โตเกิน (กัน localStorage พัง) — ปรับจำนวนได้
-  const MAX = 200;
-  if (m.details.statusLog.length > MAX){
-    m.details.statusLog = m.details.statusLog.slice(-MAX);
-  }
-}
-
-function setStatus(m, newStatus, meta = {}){
-  const prev = normStatus(m.status || m.details?.status || "");
-  const next = normStatus(newStatus);
-
-  if (prev === next) return false;
-
-  // log ก่อน
-  logStatusChange(m, prev, next, meta);
-
-  // set status จริง
-  m.status = next;
-  m.details = m.details || {};
-  m.details.status = next;
-
-  return true;
-}
-
-function renderStatusLog(m){
-  const logs = (m.details && Array.isArray(m.details.statusLog)) ? m.details.statusLog : [];
-  if (!logs.length) return '<span class="muted">-</span>';
-
-  // ใหม่ล่าสุดก่อน (เหมือนที่คุณโชว์)
-  const items = [...logs].slice().reverse().map(x => {
-    const when = x.atISO ? new Date(x.atISO) : null;
-    const whenTxt = when ? when.toLocaleString("th-TH") : "-";
-    const by = x.by || "-";
-    const src = x.source || "-";
-    const note = x.note ? ` • ${escapeHtml(x.note)}` : "";
-
-    return `
-      <div style="margin:0 0 10px;">
-        <div><strong>${escapeHtml(x.from || "-")} → ${escapeHtml(x.to || "-")}</strong></div>
-        <div class="muted" style="font-size:12px;">
-          ${escapeHtml(whenTxt)} • by: ${escapeHtml(by)} • ${escapeHtml(src)}${note}
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  return items;
-}
 
 function badgeClassFromStatus(s){
   const x = normStatus(s).toLowerCase();
@@ -1745,9 +1698,9 @@ function badgeClassFromStatus(s){
 }
 
 /* =======================
-   ✅ STATUS CHANGE LOG
-   - เก็บทุกครั้งที่ status เปลี่ยน
-   - เก็บที่ m.details.statusLog[]
+   ✅ STATUS CHANGE LOG (single source of truth)
+   - stored in m.details.statusLog[]
+   - setStatus() returns boolean: changed or not
 ======================= */
 function ensureStatusLog(m){
   m.details = m.details || {};
@@ -1757,52 +1710,62 @@ function ensureStatusLog(m){
 
 function logStatusChange(m, nextStatus, meta = {}){
   ensureStatusLog(m);
-  const prev = normStatus(m.status);
+
+  const prev = normStatus(m.status || m.details?.status || "");
   const next = normStatus(nextStatus);
-  if (prev === next) return;
+
+  if (prev === next) return false;
 
   m.details.statusLog.push({
     atISO: nowISO(),
     from: prev,
     to: next,
-    by: meta.by || "",
-    source: meta.source || "",
-    note: meta.note || "",
+    by: String(meta.by || "").trim(),
+    source: String(meta.source || "").trim(), // e.g. "auto_time", "stamp", "modal_cancel"
+    note: String(meta.note || "").trim(),
     deviceId: (typeof DEVICE_ID !== "undefined") ? DEVICE_ID : ""
   });
 
-  // เก็บล่าสุด 200
-  if (m.details.statusLog.length > 200){
-    m.details.statusLog = m.details.statusLog.slice(-200);
+  // keep last 200
+  const MAX = 200;
+  if (m.details.statusLog.length > MAX){
+    m.details.statusLog = m.details.statusLog.slice(-MAX);
   }
+
+  return true;
 }
 
 function setStatus(m, nextStatus, meta = {}){
-  const prev = normStatus(m.status);
+  const prev = normStatus(m.status || m.details?.status || "");
   const next = normStatus(nextStatus);
-  if (prev !== next){
-    logStatusChange(m, next, meta);
-    m.status = next;
-    m.details = m.details || {};
-    m.details.status = next;
-  }
-  return m;
+
+  if (prev === next) return false;
+
+  // log first
+  logStatusChange(m, next, meta);
+
+  // set actual status
+  m.status = next;
+  m.details = m.details || {};
+  m.details.status = next;
+
+  return true;
 }
 
 /* =======================
    STATUS ICON SVGs
 ======================= */
 const ICON_PREPARING_1 = `
-<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-check-icon lucide-clock-check"><path d="M12 6v6l4 2"/><path d="M22 12a10 10 0 1 0-11 9.95"/><path d="m22 16-5.5 5.5L14 19"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-check-icon lucide-clock-check"><path d="M12 6v6l4 2"/><path d="M22 12a10 10 0 1 0-11 9.95"/><path d="m22 16-5.5 5.5L14 19"/></svg>
 `;
 const ICON_TRANSPORTING_1 = `
-<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ambulance-icon lucide-ambulance"><path d="M10 10H6"/><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.28a1 1 0 0 0-.684-.948l-1.923-.641a1 1 0 0 1-.578-.502l-1.539-3.076A1 1 0 0 0 16.382 8H14"/><path d="M8 8v4"/><path d="M9 18h6"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ambulance-icon lucide-ambulance"><path d="M10 10H6"/><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.28a1 1 0 0 0-.684-.948l-1.923-.641a1 1 0 0 1-.578-.502l-1.539-3.076A1 1 0 0 0 16.382 8H14"/><path d="M8 8v4"/><path d="M9 18h6"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
 `;
 const ICON_RETURNING_1 = `
-<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-big-right-icon lucide-arrow-big-right"><path d="M11 9a1 1 0 0 0 1-1V5.061a1 1 0 0 1 1.811-.75l6.836 6.836a1.207 1.207 0 0 1 0 1.707l-6.836 6.835a1 1 0 0 1-1.811-.75V16a1 1 0 0 0-1-1H5a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-big-right-icon lucide-arrow-big-right"><path d="M11 9a1 1 0 0 0 1-1V5.061a1 1 0 0 1 1.811-.75l6.836 6.836a1.207 1.207 0 0 1 0 1.707l-6.836 6.835a1 1 0 0 1-1.811-.75V16a1 1 0 0 0-1-1H5a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z"/></svg>
 `;
 const ICON_RETURNING_2 = `
-<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-hospital-icon lucide-hospital"><path d="M12 7v4"/><path d="M14 21v-3a2 2 0 0 0-4 0v3"/><path d="M14 9h-4"/><path d="M18 11h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2"/><path d="M18 21V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-hospital-icon lucide-hospital"><path d="M12 7v4"/><path d="M14 21v-3a2 2 0 0 0-4 0v3"/><path d="M14 9h-4"/><path d="M18 11h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2"/><path d="M18 21V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16"/></svg>
 `;
 const ICON_DELAYED_1 = `
 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
@@ -1965,6 +1928,32 @@ function formatDepartureCell(m){
    DETAILS RENDER (read-only)
 ======================= */
 function fmt(v){ return v ? escapeHtml(v) : '<span class="muted">-</span>'; }
+
+function getFirstLast(p){
+  const first = String(p?.firstName || "").trim();
+  const last  = String(p?.lastName || "").trim();
+
+  // ถ้ามีอยู่แล้วก็ใช้เลย
+  if (first || last){
+    return { firstName:first, lastName:last, fullName:[first,last].filter(Boolean).join(" ").trim() };
+  }
+
+  // fallback: แยกจาก fullName (ข้อมูลเก่า)
+  const full = String(p?.fullName || "").trim();
+  if (!full) return { firstName:"", lastName:"", fullName:"" };
+
+  const parts = full.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1){
+    return { firstName:full, lastName:"", fullName:full };
+  }
+  return {
+    firstName: parts[0],
+    lastName: parts.slice(1).join(" "),
+    fullName: full
+  };
+}
+
+
 function section(title, rows){
   const kv = rows.map(([k,v]) => `<div class="k">${escapeHtml(k)}</div><div class="v">${v}</div>`).join("");
   return `<div class="section"><h3>${escapeHtml(title)}</h3><div class="kv">${kv}</div></div>`;
@@ -2013,17 +2002,23 @@ function renderDetails(m){
   const p = m.details || {};
   const blocks = [];
 
-  blocks.push(section("Patient Information — ข้อมูลผู้ป่วย", [
-    ["Full Name", fmt(p.fullName)],
-    ["Gender", fmt(p.gender)],
-    ["Age (years)", fmt(p.ageYears)],
-    ["Weight (kg)", fmt(p.weightKg)],
-    ["Nationality", fmt(p.nationality)],
-    ["HN", fmt(p.hn)],
-    ["Ward", fmt(p.ward)],
-    ["Diagnosis", fmt(p.diagnosis)],
-    ["Purpose of Transport", fmt(p.purpose)]
-  ]));
+  const nm = getFirstLast(p);
+
+blocks.push(section("Patient Information — ข้อมูลผู้ป่วย", [
+  ["First name", fmt(nm.firstName)],
+  ["Last name", fmt(nm.lastName)],
+  ["Full name (auto)", fmt(nm.fullName)],
+
+  ["Gender", fmt(p.gender)],
+  ["Age (years)", fmt(p.ageYears)],
+  ["Weight (kg)", fmt(p.weightKg)],
+  ["Nationality", fmt(p.nationality)],
+  ["HN", fmt(p.hn)],
+  ["Ward", fmt(p.ward)],
+  ["Diagnosis", fmt(p.diagnosis)],
+  ["Purpose of Transport", fmt(p.purpose)]
+]));
+
 
   blocks.push(section("Vehicle", [
     ["Vehicle Type", fmt(p.vehicleType)],
@@ -2364,22 +2359,167 @@ function refreshOpenDetailsIfAny(){
   if (bodyEl) bodyEl.innerHTML = renderDetails(m);
   syncDetailsFooterButton();
 }
+// ✅ helper: exclude deleted missions (รองรับทั้ง hard-delete และ soft-delete)
+function isDeletedMission(m){
+  if (!m) return true;
+  const d = m.details || {};
+  return !!(
+    m.isDeleted || m._deleted || m.deleted || m.deletedAt ||
+    d.isDeleted || d._deleted || d.deleted || d.deletedAt
+  );
+}
 
-/* =======================
-   RENDER TABLE
-======================= */
-function render(){
-  allMissions = readMissions();
+function getSelectedDayISO(){
+  const todayISO = toISODateLocal(new Date());
+  const picked = String(document.getElementById("dateFilter")?.value || "").trim();
+  return picked || todayISO;
+}
 
-  // auto update statuses first
-  if (autoUpdatePreparingDelayed(allMissions)){
-    writeMissions(allMissions);
-    allMissions = readMissions();
+function getRawStatusLocal(m){
+  const s1 = (m && m.status != null) ? String(m.status).trim() : "";
+  const s2 = (m && m.details && m.details.status != null) ? String(m.details.status).trim() : "";
+  return s1 || s2;
+}
+
+function isDoneStatus(st){
+  st = normStatus(st);
+  return st === "Completed" || st === "Cancelled";
+}
+
+function isoToISODate(iso){
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return toISODateLocal(d);
+}
+
+function getStatusChangedAtISO(m){
+  const d = m?.details || {};
+
+  // 1) explicit statusChangedAt
+  const direct = String(m?.statusChangedAt || d?.statusChangedAt || "").trim();
+  if (direct) return direct;
+
+  // 2) Cancelled
+  const c = d.cancel || {};
+  const cancelledISO = String(c.cancelledAtISO || d.cancelledAtISO || d.cancelledAt || "").trim();
+  if (cancelledISO) return cancelledISO;
+
+  // 3) Completed (best-effort)
+  const completedDirect = String(d.completedAtISO || d.completedAt || "").trim();
+  if (completedDirect) return completedDirect;
+
+  const op = d.OperationStamp || {};
+  const opLast = String(op.lastUpdatedAt || "").trim();
+  if (opLast) return opLast;
+
+  if (Array.isArray(op.steps) && op.steps.length){
+    const lastStep = [...op.steps]
+      .filter(x => x && x.tsISO)
+      .sort((a,b)=> String(a.tsISO).localeCompare(String(b.tsISO)))
+      .pop();
+    if (lastStep?.tsISO) return String(lastStep.tsISO);
   }
 
-  const selectedDate = (document.getElementById("dateFilter")?.value || getTodayISO());
+  const log = Array.isArray(d.timeStampLog) ? d.timeStampLog : [];
+  if (log.length){
+    const last = [...log]
+      .filter(x => x && x.at)
+      .sort((a,b)=> String(a.at).localeCompare(String(b.at)))
+      .pop();
+    if (last?.at) return String(last.at);
+  }
 
-  // top boxes
+  return "";
+}
+
+function getStatusChangedDayISO(m){
+  const iso = getStatusChangedAtISO(m);
+  return isoToISODate(iso) || "";
+}
+
+// ===============================
+// ✅ Firestore SOURCE OF TRUTH
+// ===============================
+window.DATA_SOURCE = "firestore";
+window.FIRESTORE_MISSIONS = [];
+
+listenMissions((arr)=>{
+  console.log("🔥 Firestore missions:", arr.length);
+
+  window.FIRESTORE_MISSIONS = arr || [];
+
+  render(); // realtime refresh
+}, (err)=>{
+  console.error("Firestore listener error:", err);
+});
+
+
+/* =======================
+   RENDER TABLE  ✅ SINGLE SOURCE OF TRUTH
+======================= */
+function render(){
+  // ✅ อ่านครั้งเดียว
+  const isFirestore = ((window.DATA_SOURCE || "local") === "firestore");
+  let missions = readMissions();
+
+  // ✅ กัน null/undefined
+  missions = Array.isArray(missions) ? missions : [];
+
+  // ✅ auto update statuses first
+  const changedByAuto = autoUpdatePreparingDelayed(missions);
+
+  // ✅ ถ้า local mode: persist ลง localStorage
+  if (changedByAuto && !isFirestore){
+    writeMissions(missions);
+    // ไม่ต้อง read ซ้ำ เพราะ missions คือ state ล่าสุดอยู่แล้ว
+  }
+
+  // -----------------------
+  // ✅ TOP STATS (อิง selectedDay)
+  // -----------------------
+  const selectedDay = getSelectedDayISO();
+  const selectedYear = String(selectedDay || "").slice(0,4);
+
+  // ✅ source-of-truth + exclude deleted
+  const all = missions.filter(m => !isDeletedMission(m));
+
+  // ✅ Today table logic (match operation.html)
+  const todayMissions = all.filter(m => {
+    const st = normStatus(getRawStatusLocal(m));
+    if (st === "Aborted") return false;
+
+    const missionDay = getMissionDateISO(m);
+    if (!missionDay) return false;
+
+    if (isDoneStatus(st)){
+      const changedDay = getStatusChangedDayISO(m) || missionDay;
+      return changedDay === selectedDay;
+    }
+    return missionDay === selectedDay;
+  });
+
+  // ✅ Year rows (อิง mission day)
+  const yearRows = all.filter(m => {
+    const day = getMissionDateISO(m);
+    return day && String(day).slice(0,4) === selectedYear;
+  });
+
+  // ✅ Stats from todayMissions
+  const activeSet = new Set(["Preparing","Delayed","Transporting","Returning"]);
+  const activeToday = todayMissions.filter(m => activeSet.has(normStatus(getRawStatusLocal(m)))).length;
+
+  const remaining = todayMissions.filter(m => {
+    const s = normStatus(getRawStatusLocal(m));
+    return (s === "Scheduled" || s === "Pending");
+  }).length;
+
+  const completedToday = todayMissions.filter(m => normStatus(getRawStatusLocal(m)) === "Completed").length;
+  const cancelledToday = todayMissions.filter(m => normStatus(getRawStatusLocal(m)) === "Cancelled").length;
+
+  const totalToday = todayMissions.length;
+
+  // set UI
   const elTotal = document.getElementById("total");
   const elTodayTotal = document.getElementById("todayTotal");
   const elActiveToday = document.getElementById("activeToday");
@@ -2387,24 +2527,16 @@ function render(){
   const elCompletedToday = document.getElementById("completedN");
   const elCancelledToday = document.getElementById("cancelledN");
 
-  const totalYear = allMissions.length;
-  const dayRows = allMissions.filter(m => String(m.date ?? "").slice(0,10) === selectedDate);
-  const totalToday = dayRows.length;
-
-  const activeSet = new Set(["Preparing","Delayed","Transporting","Returning"]);
-  const activeToday = dayRows.filter(m => activeSet.has(normStatus(m.status))).length;
-  const remainingScheduled = dayRows.filter(m => normStatus(m.status) === "Scheduled").length;
-  const completedToday = dayRows.filter(m => normStatus(m.status) === "Completed").length;
-  const cancelledToday = dayRows.filter(m => normStatus(m.status) === "Cancelled").length;
-
-  if (elTotal) elTotal.innerText = totalYear;
+  if (elTotal) elTotal.innerText = yearRows.length;
   if (elTodayTotal) elTodayTotal.innerText = totalToday;
   if (elActiveToday) elActiveToday.innerText = activeToday;
-  if (elRemainScheduled) elRemainScheduled.innerText = remainingScheduled;
+  if (elRemainScheduled) elRemainScheduled.innerText = remaining;
   if (elCompletedToday) elCompletedToday.innerText = completedToday;
   if (elCancelledToday) elCancelledToday.innerText = cancelledToday;
 
-  // filters
+  // -----------------------
+  // FILTERS + TABLE TITLE
+  // -----------------------
   const searchEl = document.getElementById("search");
   const statusEl = document.getElementById("statusFilter");
   const titleEl  = document.getElementById("tableTitle");
@@ -2414,16 +2546,19 @@ function render(){
   const q = (searchEl?.value || "").trim().toLowerCase();
   const status = statusEl?.value || "ALL";
 
-  const titleDate = new Date(selectedDate + "T00:00:00");
+  const titleDate = new Date(selectedDay + "T00:00:00");
   if (titleEl){
     titleEl.innerText = `Missions: ${titleDate.toLocaleDateString("th-TH", { year:"numeric", month:"short", day:"numeric" })}`;
   }
 
-  let rows = allMissions.filter(m => String(m.date ?? "").slice(0,10) === selectedDate);
+  // ✅ rows สำหรับตาราง: ใช้ ALL missions ของ selectedDay (เหมือนเดิม)
+  let rows = [...todayMissions]; // ✅ ใช้ logic เดียวกับ stat
 
-  if (status !== "ALL"){
-    rows = rows.filter(m => normStatus(m.status) === status);
-  }
+
+  // ✅ status filter
+if (status !== "ALL"){
+  rows = rows.filter(m => normStatus(getRawStatusLocal(m)) === status);
+}
 
   if (q){
     rows = rows.filter(m => {
@@ -2436,13 +2571,15 @@ function render(){
         m.typeDisplay, m.type, m.typeKey,
         dep,
         ft.from, ft.to, ft.fromDetail, ft.toDetail,
-        m.notes, m.status
+        m.notes, getRawStatusLocal(m)
       ].join(" ").toLowerCase();
       return blob.includes(q);
     });
   }
 
-  // sort + grouping
+  // -----------------------
+  // SORT + GROUPING (คงของเดิม)
+  // -----------------------
   function _depStr(m){
     const d = m.details || {};
     return d.departureFromHospital || d.departureOriginal || "";
@@ -2471,13 +2608,16 @@ function render(){
   }
 
   rows.sort((a,b)=> {
-    const ta = _tierRank(a.status);
-    const tb = _tierRank(b.status);
+    const sa = normStatus(getRawStatusLocal(a));
+    const sb = normStatus(getRawStatusLocal(b));
+
+    const ta = _tierRank(sa);
+    const tb = _tierRank(sb);
     if (ta !== tb) return ta - tb;
 
     if (ta === 0){
-      const ba = _activeBlockRank(a.status);
-      const bb = _activeBlockRank(b.status);
+      const ba = _activeBlockRank(sa);
+      const bb = _activeBlockRank(sb);
       if (ba !== bb) return ba - bb;
 
       const ma = _depMinutesOfDay(a);
@@ -2514,8 +2654,8 @@ function render(){
 
   const completedCollapsed = isCollapsed("completed");
   const cancelledCollapsed = isCollapsed("cancelled");
-  const completedCount = rows.filter(x => _tierRank(x.status) === 1).length;
-  const cancelledCount = rows.filter(x => _tierRank(x.status) === 2).length;
+  const completedCount = rows.filter(x => _tierRank(normStatus(getRawStatusLocal(x))) === 1).length;
+  const cancelledCount = rows.filter(x => _tierRank(normStatus(getRawStatusLocal(x))) === 2).length;
 
   function groupHeaderRow(kind, count){
     const collapsed = isCollapsed(kind);
@@ -2542,7 +2682,7 @@ function render(){
   let injectedCancelledHeader = false;
 
   rows.forEach(m => {
-    const s = normStatus(m.status);
+    const s = normStatus(getRawStatusLocal(m));
     const tier = _tierRank(s);
 
     if (tier === 1 && !injectedCompletedHeader){
@@ -2583,7 +2723,7 @@ function render(){
     html += `
       <tr class="${rowClass}">
         <td><strong>${escapeHtml(m.id ?? "-")}</strong></td>
-        <td>${escapeHtml(String(m.date ?? "").slice(0,10) || "-")}</td>
+        <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
         <td>${formatDepartureCell(m)}</td>
         <td title="${escapeHtml(typeShort)}">${escapeHtml(typeShort)}</td>
         <td>${escapeHtml(ft.from || "-")}</td>
@@ -2610,6 +2750,8 @@ function render(){
   syncDetailsFooterButton();
   refreshOpenDetailsIfAny();
 }
+
+
 
 /* =======================
    DETAILS MODAL
@@ -2736,16 +2878,57 @@ function closeCancelDialog(){
 }
 
 function getMissionById(id){
+  const _id = String(id || "");
+
+  // ✅ ใช้ Firestore memory ก่อนเสมอ
+  const fs = Array.isArray(window.FIRESTORE_MISSIONS)
+    ? window.FIRESTORE_MISSIONS
+    : [];
+
+  const hit = fs.find(x => String(x?.id) === _id);
+  if (hit) return hit;
+
+  // fallback (offline)
   const missions = readMissions();
-  return missions.find(x => String(x.id) === String(id)) || null;
+  return missions.find(x => String(x.id) === _id) || null;
 }
+
 function upsertMission(m){
-  const missions = readMissions();
-  const idx = missions.findIndex(x => String(x.id) === String(m.id));
-  if (idx >= 0) missions[idx] = m;
-  else missions.push(m);
-  writeMissions(missions);
+  if (!m?.id) return;
+
+  const id = String(m.id);
+
+  // 1) Optimistic update (UI ทันที)
+  try{
+    const arr = Array.isArray(window.FIRESTORE_MISSIONS) ? window.FIRESTORE_MISSIONS : [];
+    const idx = arr.findIndex(x => String(x?.id) === id);
+    const next = (idx >= 0)
+      ? [...arr.slice(0, idx), m, ...arr.slice(idx + 1)]
+      : [m, ...arr];
+
+    window.DATA_SOURCE = "firestore";
+    window.FIRESTORE_MISSIONS = next;
+
+    emitSync("MISSIONS_UPDATED", { id, at: Date.now() });
+  }catch(e){
+    console.warn("optimistic update failed:", e);
+  }
+
+  // 2) Firestore write (ของจริง)
+  try{
+    const saver = window.DB?.saveMission;
+    if (typeof saver === "function"){
+      saver(id, m).catch(err => console.warn("FS save failed:", err));
+    } else {
+      console.warn("DB.saveMission not ready yet");
+    }
+  }catch(e){
+    console.warn("DB bridge error:", e);
+  }
+
+  // 3) ไม่ต้อง writeMissions ในโหมด firestore
 }
+
 
 function confirmCancelMission(){
   if (!currentMissionId) return;
@@ -3146,6 +3329,26 @@ document.addEventListener("keydown", (e) => {
   render();
 })();
 </script>
+<script type="module">
+import { subscribeMissions48h, setMissionPatch } from "./firebase_db.js";
+
+window.DB = window.DB || {};
+
+// ✅ ให้ upsertMission ใช้ "saveMission" ได้เหมือนเดิม แต่จริงๆเรียก setMissionPatch
+window.DB.saveMission = (id, missionObj) => setMissionPatch(id, missionObj);
+
+// เผื่อที่อื่นเรียกตรงๆ
+window.DB.setMissionPatch = setMissionPatch;
+
+subscribeMissions48h((arr) => {
+  window.DATA_SOURCE = "firestore";
+  window.FIRESTORE_MISSIONS = Array.isArray(arr) ? arr : [];
+  render(); // ✅ ดึงมาปุ๊บ render ปั๊บ
+});
+</script>
+
+
+
 
 </body>
 </html>

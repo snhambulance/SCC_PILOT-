@@ -179,9 +179,8 @@ input:disabled, select:disabled, textarea:disabled{
       <!-- ===== BASIC ===== -->
       <div class="grid">
         <div class="field">
-          <label>Mission ID *</label>
-          <input id="id" required placeholder="e.g., 2025-IFT-OUT-0001">
-          <div class="hint">ถ้า ID ซ้ำ (ในโหมด Add) ระบบจะอัปเดตเคสเดิม</div>
+          <label>Mission No.</label>
+          <input id="id" placeholder="Mission No (optional)">
         </div>
 
         <div class="field">
@@ -190,21 +189,20 @@ input:disabled, select:disabled, textarea:disabled{
     <option value="Scheduled">Scheduled</option>
     <option value="Activated">Activated</option>
   </select>
-  <div class="hint">
-    * Add mode: เลือกได้แค่ Scheduled / Activated<br>
-    * Edit mode: status จะถูก lock (ให้ระบบจัดการจาก operation/index)
-  </div>
 </div>
 
         <div class="field">
-          <label>Date *</label>
-          <input id="date" type="date" required>
-        </div>
+  <label>Request date *</label>
+  <input id="requestDate" type="date" required>
+  <div class="hint">วันที่รับเรื่อง</div>
+</div>
+
 
         <div class="field">
-          <label>Time (backup only)</label>
-          <input id="time" type="time" placeholder="(optional)">
-        </div>
+          <label>Departure date *</label>
+          <input id="date" type="date" required>
+        <div class="hint">วันที่นัดออกเดินทาง</div>
+</div>
 
         <div class="field">
           <label>Mission Group *</label>
@@ -421,14 +419,77 @@ input:disabled, select:disabled, textarea:disabled{
 <script>
 const STORAGE_KEY = "SCC_MISSIONS_V1";
 
-/* ✅ IMPORTANT:
-   Don't use variable name "status" (can collide with window.status)
-   Use missionStatusEl = real <select id="missionStatus"> */
-const missionStatusEl = document.getElementById("missionStatus");
+// ===== DOM refs (MUST exist) =====
+const missionForm = document.getElementById("missionForm");
+const pageTitle   = document.getElementById("pageTitle");
+const saveBtn     = document.getElementById("saveBtn");
+const backBtn     = document.getElementById("backBtn");
+const resetBtn    = document.getElementById("resetBtn");
+
+const id          = document.getElementById("id");
+const date        = document.getElementById("date");
+const group       = document.getElementById("group");
+const typeKey     = document.getElementById("typeKey");
+const typeDisplay = document.getElementById("typeDisplay");
+const vehicleTypeMain = document.getElementById("vehicleTypeMain");
+const vehicle     = document.getElementById("vehicle");
+const notes       = document.getElementById("notes");
+const detailsGrid = document.getElementById("detailsGrid");
+
+const missionStatusEl = document.getElementById("missionStatus");   // ✅ ADD
+const requestDate     = document.getElementById("requestDate");     // ✅ ADD
+
+const editLockHint= document.getElementById("editLockHint");
+
+// patient fields
+const p_fullName   = document.getElementById("p_fullName");
+const p_gender     = document.getElementById("p_gender");
+const p_ageDays    = document.getElementById("p_ageDays");
+const p_ageMonths  = document.getElementById("p_ageMonths");
+const p_ageYears   = document.getElementById("p_ageYears");
+const p_weightKg   = document.getElementById("p_weightKg");
+const p_nationality= document.getElementById("p_nationality");
+const p_hn         = document.getElementById("p_hn");
+const p_ward       = document.getElementById("p_ward");
+const p_diagnosis  = document.getElementById("p_diagnosis");
+const p_purpose    = document.getElementById("p_purpose");
+
+// map elements
+const fromLatLng = document.getElementById("fromLatLng");
+const toLatLng   = document.getElementById("toLatLng");
+const pinPaste   = document.getElementById("pinPaste");
+
+const openRouteBtn      = document.getElementById("openRouteBtn");
+const openGMapsFromBtn  = document.getElementById("openGMapsFromBtn");
+const openGMapsToBtn    = document.getElementById("openGMapsToBtn");
+const openMapFromBtn    = document.getElementById("openMapFromBtn");
+const openMapToBtn      = document.getElementById("openMapToBtn");
+const applyPasteFromBtn = document.getElementById("applyPasteFromBtn");
+const applyPasteToBtn   = document.getElementById("applyPasteToBtn");
+const clearPinsBtn      = document.getElementById("clearPinsBtn");
+
+const mapOverlay = document.getElementById("mapOverlay");
+const mapTitle   = document.getElementById("mapTitle");
+const mapSub     = document.getElementById("mapSub");
+const closeMapBtn= document.getElementById("closeMapBtn");
+const cancelMapBtn= document.getElementById("cancelMapBtn");
+const saveMapBtn = document.getElementById("saveMapBtn");
+const mapSearch  = document.getElementById("mapSearch");
+const mapSearchBtn= document.getElementById("mapSearchBtn");
+const useCurrentCenterBtn = document.getElementById("useCurrentCenterBtn");
+const mapResults = document.getElementById("mapResults");
+const pickedLatLng = document.getElementById("pickedLatLng");
+
+// ✅ guard กันพังเงียบ
+if (!group || !typeKey || !missionStatusEl || !requestDate){
+  console.error("Missing DOM refs:", { group, typeKey, missionStatusEl, requestDate });
+}
 
 if (!missionStatusEl){
   console.warn("missionStatus <select> not found. Check id='missionStatus' in HTML.");
 }
+
+
 
 /* ✅ SYNC (NEW) */
 const SYNC_KEY = "__SCC_SYNC_PING__";
@@ -436,6 +497,24 @@ const BC_NAME  = "SCC_SYNC_V1";
 const bc = ("BroadcastChannel" in window) ? new BroadcastChannel(BC_NAME) : null;
 const DATA_SOURCE = "local";
 
+function makeUID(){
+  const d = new Date();
+
+  const date =
+    d.getFullYear().toString() +
+    String(d.getMonth()+1).padStart(2,"0") +
+    String(d.getDate()).padStart(2,"0");
+
+  const time =
+    String(d.getHours()).padStart(2,"0") +
+    String(d.getMinutes()).padStart(2,"0") +
+    String(d.getSeconds()).padStart(2,"0");
+
+  // ✅ random 6 digits
+  const rand = Math.floor(100000 + Math.random() * 900000);
+
+  return date + time + rand;
+}
 
 
 function emitSync(payload){
@@ -498,15 +577,17 @@ async function writeMissions(arr, meta){
 
 function pad2(n){ return String(n).padStart(2,'0'); }
 function toISODateLocal(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function getTodayISO(){ return toISODateLocal(new Date()); }
 function getQueryParam(name){ return (new URL(location.href)).searchParams.get(name); }
 function nowISO(){ return new Date().toISOString(); }
 function isEmpty(v){ return v === undefined || v === null || String(v).trim() === ""; }
 
 /* ✅ Edit-mode flags declared BEFORE any build/init calls */
-const editId = getQueryParam("edit");
+const editUid = getQueryParam("edit");
 let isEditMode = false;
 let existingMissionSnapshot = null;
-let originalId = null;
+let originalUid = null;   // ✅ edit primary key
+
 
 /* ========= Mission dropdown master =========
    ✅ UPDATED: Added HHC_PICKUP / HHC_SEND
@@ -747,8 +828,8 @@ function lockFilledFieldsForEdit(existingMission){
   const od = old.details || {};
 
   lockIfHasValue(id, old.id);
-  lockIfHasValue(date, String(old.date||"").slice(0,10));
-  lockIfHasValue(time, old.time);
+  lockIfHasValue(requestDate, String(od.requestDateISO||"").slice(0,10)); // ✅ new
+lockIfHasValue(date, String(old.date||"").slice(0,10));                 // departure
   lockIfHasValue(group, old.missionGroup);
   lockIfHasValue(typeKey, old.typeKey);
   lockIfHasValue(vehicleTypeMain, od.vehicleType);
@@ -874,38 +955,41 @@ typeKey.addEventListener("change", () => {
 });
 
 /* ========= Header defaults ========= */
-date.value = toISODateLocal(new Date());
+// ✅ defaults
+if (requestDate) requestDate.value = toISODateLocal(new Date()); // request date = วันนี้
+date.value = toISODateLocal(new Date());                         // departure date = วันนี้ (แก้ได้)
 missionStatusEl.value = "Scheduled";
 
+
 /* ========= Load edit ========= */
-function loadForEdit(missionId){
+function loadForEdit(uid){
   const missions = readMissions();
-  const m = missions.find(x => String(x.id) === String(missionId));
+  const m = missions.find(x => String(x.uid) === String(uid));
   if (!m) return;
 
   isEditMode = true;
   existingMissionSnapshot = JSON.parse(JSON.stringify(m));
-  originalId = m.id;
+  originalUid = m.uid;
 
-  pageTitle.textContent = `Edit Mission — ${m.id}`;
+  pageTitle.textContent = `Edit Mission — ${m.id || "-"}`;
   saveBtn.textContent = "Save / Update";
-
   editLockHint.style.display = "block";
 
   id.value = m.id || "";
+  id.disabled = true;
 
-  // ✅ Use the GLOBAL missionStatusEl (do NOT redeclare const here)
   if (missionStatusEl){
     missionStatusEl.value = String(m.status || "Scheduled").trim() || "Scheduled";
     missionStatusEl.disabled = true;
   }
 
+  if (requestDate){
+    requestDate.value = (m.details?.requestDateISO || "").slice(0,10) || requestDate.value;
+  }
   date.value = (m.date || "").slice(0,10) || date.value;
-  time.value = m.time || "";
+
   vehicle.value = m.vehicle || "";
   notes.value = m.notes || "";
-
-  id.disabled = true;
 
   const p = m.details || {};
   p_fullName.value = p.fullName || "";
@@ -947,6 +1031,7 @@ function loadForEdit(missionId){
 
   lockFilledFieldsForEdit(existingMissionSnapshot);
 }
+
 
 
 /* ========= Map pin parsing & logging ========= */
@@ -1247,14 +1332,18 @@ function initAgeSoftLock(){
 
 /* ========= FORCE REQUIRE date+time ALWAYS ========= */
 function enforceDateTimeAlwaysRequired(){
+  if (requestDate){
+    requestDate.required = true;
+    if (!requestDate.value) requestDate.value = toISODateLocal(new Date());
+  }
   if (date){
     date.required = true;
     if (!date.value) date.value = toISODateLocal(new Date());
   }
-  if (time){
-    time.required = true;
-  }
 }
+
+
+
 
 // เรียกตอนเริ่มหน้า
 enforceDateTimeAlwaysRequired();
@@ -1288,9 +1377,9 @@ missionForm.addEventListener("submit", async (e) => {
   const fields = resolveFields(typeKey.value);
   const missions = readMissions();
 
-  const existing = (isEditMode && originalId)
-    ? missions.find(x => String(x.id) === String(originalId))
-    : null;
+  const existing = (isEditMode && originalUid)
+  ? missions.find(x => String(x.uid) === String(originalUid))
+  : null;
 
   const oldDetails = (existing && existing.details) ? existing.details : {};
 
@@ -1311,6 +1400,7 @@ const chosenStatus = String(missionStatusEl?.value || "").trim()
 
   // ✅ attemptedDetails: เอา p_p_diagnosis / p_purpose ออก (ทำให้พังถ้าไม่มีตัวแปรนี้)
   const attemptedDetails = {
+    missionNo: String(id.value || "").trim(),
     fullName: p_fullName.value.trim(),
     gender: p_gender.value,
 
@@ -1406,21 +1496,44 @@ const chosenStatus = String(missionStatusEl?.value || "").trim()
   if (chosenStatus === "Activated"){
     finalDetails.departureFromHospital = "";
   }
+  // ✅ ADD THIS: requestDateISO + createdAtISO
+  // ✅ Request/Created date comes from requestDate input
+finalDetails.requestDateISO = String(
+  finalDetails.requestDateISO ||
+  existing?.details?.requestDateISO ||
+  (requestDate ? requestDate.value : "") ||
+  toISODateLocal(new Date())
+).slice(0,10);
+
+// ✅ createdAtISO: set once on create, preserve on edit
+finalDetails.createdAtISO = String(
+  finalDetails.createdAtISO ||
+  existing?.details?.createdAtISO ||
+  nowISO()
+);
+
 
   // ✅ Build mission
   const newMissionAttempt = {
-    id: id.value.trim(),
-    date: date.value,
-    time: time.value, // ✅ required แล้ว ไม่ต้อง fallback ""
-    missionGroup: MISSION_MASTER[Number(group.value)]?.group ?? "",
-    typeKey: typeKey.value,
-    type: selected?.label ?? "",
-    typeDisplay: selected?.display ?? "",
-    vehicle: vehicle.value.trim(),
-    status: chosenStatus,
-    notes: notes.value.trim(),
-    details: finalDetails
-  };
+  uid: (isEditMode && existing?.uid) ? existing.uid : makeUID(), // ✅ สำคัญสุด
+  id: String(id.value || "").trim(),
+
+
+
+  // ✅ Departure date (for Today table)
+  date: (date?.value || "").slice(0,10),
+
+  missionGroup: MISSION_MASTER[Number(group.value)]?.group ?? "",
+  typeKey: typeKey.value,
+  type: selected?.label ?? "",
+  typeDisplay: selected?.display ?? "",
+  vehicle: vehicle.value.trim(),
+  status: chosenStatus,
+  notes: notes.value.trim(),
+  details: finalDetails
+};
+
+// ✅ optional: clear legacy time field
 
   // keep status inside details too (for older viewers)
   newMissionAttempt.details.status = chosenStatus;
@@ -1441,35 +1554,46 @@ const chosenStatus = String(missionStatusEl?.value || "").trim()
   if (isEmpty(existing.notes) && !isEmpty(newMissionAttempt.notes)) finalMission.notes = newMissionAttempt.notes;
 }
 
+// ✅ clear legacy field safely (หลัง finalMission มีอยู่แล้ว)
+if (finalMission && Object.prototype.hasOwnProperty.call(finalMission, "time")){
+  delete finalMission.time;
+}
   const list = readMissions();
   let out = list.slice();
 
   let action = "save";
-  if (isEditMode){
-    action = "update";
-    const idx = out.findIndex(x => String(x.id) === String(originalId));
-    if (idx >= 0) out[idx] = finalMission;
-    else out.push(finalMission);
-  } else {
-    const idx = out.findIndex(x => String(x.id).toLowerCase() === finalMission.id.toLowerCase());
-    if (idx >= 0) { out[idx] = finalMission; action = "update"; }
-    else out.push(finalMission);
-  }
+if (isEditMode){
+  action = "update";
+  const idx = out.findIndex(x => String(x.uid) === String(originalUid));
+  if (idx >= 0) out[idx] = finalMission;
+  else out.push(finalMission);
+} else {
+  // ✅ Add mode = always NEW mission even if HN same
+  out.push(finalMission);
+}
 
   // ✅ 1) เขียน Firestore ก่อน (ชัวร์สุด กันเคสหาย)
-  try{
-    if (!window.DB || !window.DB.saveMission) {
-      throw new Error("DB bridge not ready (window.DB.saveMission missing)");
-    }
-    await window.DB.saveMission(finalMission.id, finalMission);
-  }catch(err){
-    console.error(err);
-    alert("บันทึกขึ้น Firestore ไม่สำเร็จ: " + (err?.message || err));
-    return; // ✅ ห้าม redirect ถ้าเซฟไม่สำเร็จ
+try{
+  if (!window.DB) throw new Error("DB bridge not ready");
+
+  const docId = String(finalMission.uid); // ✅ ใช้ uid เป็น key
+
+  if (isEditMode && window.DB.updateMission){
+    await window.DB.updateMission(docId, finalMission);
+  } else if (window.DB.saveMission){
+    await window.DB.saveMission(docId, finalMission);
+  } else {
+    throw new Error("DB bridge missing saveMission/updateMission");
   }
+}catch(err){
+  console.error(err);
+  alert("บันทึกขึ้น Firestore ไม่สำเร็จ: " + (err?.message || err));
+  return;
+}
+
 
   // ✅ 2) (optional) เก็บ localStorage เป็น backup + sync ข้ามแท็บ
-  writeMissions(out, { action, missionId: finalMission.id });
+  writeMissions(out, { action, missionId: finalMission.uid });
 
     // ✅ 3) ค่อย redirect
   location.href = "index.html";
@@ -1487,12 +1611,16 @@ resetBtn.addEventListener("click", () => {
   if (!confirm("Clear form ทั้งหมดใช่ไหม?")) return;
 
   missionForm.reset();
-  date.value = toISODateLocal(new Date());
-  missionStatusEl.value = "Scheduled";
+
+if (requestDate) requestDate.value = toISODateLocal(new Date()); // ✅ NEW
+date.value = toISODateLocal(new Date());                         // departure date
+
+missionStatusEl.value = "Scheduled";
+
 
   isEditMode = false;
   existingMissionSnapshot = null;
-  originalId = null;
+  originalUid = null;
 
   detailsState.fromLat = null; detailsState.fromLng = null;
   detailsState.toLat = null; detailsState.toLng = null;
@@ -1518,9 +1646,10 @@ initAgeSoftLock();
 // ✅ require ตั้งแต่ตอนเริ่ม
 enforceDateTimeAlwaysRequired();
 
-if (editId){
-  loadForEdit(editId);
+if (editUid){
+  loadForEdit(editUid);
 }
+
 
 </script>
 

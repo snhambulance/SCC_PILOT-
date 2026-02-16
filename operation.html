@@ -195,55 +195,53 @@ OPERATION.HTML (copy + paste) ✅ FINAL — FIXED (no boot-dup / no stray code)
     outline:none;
     background:#fff;
   }
-  
-  .field{
-  display:flex;
-  flex-direction:column;
-}
 
+  .field{
+    display:flex;
+    flex-direction:column;
+  }
 
   .tableWrap{
-  overflow-x:hidden;          /* ✅ ไม่ให้มี scroll ซ้าย/ขวา */
-  overflow-y:auto;
-  border-radius:14px;
-  border:1px solid #eef2f7;
-}
+    overflow-x:hidden;
+    overflow-y:auto;
+    border-radius:14px;
+    border:1px solid #eef2f7;
+  }
 
-table{
-  width:100%;
-  border-collapse:separate;
-  border-spacing:0;
-  min-width:0;                /* ✅ เอา 1620px ออก ไม่งั้นยังไงก็ล้น */
-  table-layout:fixed;         /* ✅ บังคับให้คอลัมน์หดตามจอ */
-  font-size:14px;
-}
+  table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    min-width:0;
+    table-layout:fixed;
+    font-size:14px;
+  }
 
-thead th{
-  position:sticky;
-  top:0;
-  background:#f8fafc;
-  color:#374151;
-  text-align:left;
-  padding:12px 12px;
-  border-bottom:1px solid #e5e7eb;
-  z-index:1;
-  white-space:nowrap;         /* header ไม่แตกบรรทัด */
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
+  thead th{
+    position:sticky;
+    top:0;
+    background:#f8fafc;
+    color:#374151;
+    text-align:left;
+    padding:12px 12px;
+    border-bottom:1px solid #e5e7eb;
+    z-index:1;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
 
-tbody td{
-  padding:12px 12px;
-  border-bottom:1px solid #f0f2f5;
-  color:#111827;
-  vertical-align:top;
-  white-space:nowrap;         /* ✅ กันข้อความดันจนตารางล้น */
-  overflow:hidden;
-  text-overflow:ellipsis;     /* ✅ ตัดเป็น ... */
-}
+  tbody td{
+    padding:12px 12px;
+    border-bottom:1px solid #f0f2f5;
+    color:#111827;
+    vertical-align:top;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
 
-tbody tr:hover{ background:#fafcff; }
-
+  tbody tr:hover{ background:#fafcff; }
 
   /* ===== STATUS BADGES ===== */
   .badge{
@@ -255,28 +253,16 @@ tbody tr:hover{ background:#fafcff; }
     border:1px solid transparent;
     white-space:nowrap;
   }
-  /* Scheduled = ม่วง */
-.b-scheduled{ background:#f3e8ff; color:#6b21a8; border-color:#d8b4fe; }
-/* Preparing = ฟ้า */
-.b-preparing{ background:#e0f2fe; color:#075985; border-color:#bae6fd; }
-/* Delayed = แดง */
-.b-delayed{ background:#fee2e2; color:#991b1b; border-color:#fecaca; }
-/* Transporting = เขียว */
-.b-transporting{ background:#dcfce7; color:#166534; border-color:#86efac; }
-/* Returning = ส้ม */
-.b-returning{ background:#ffedd5; color:#9a3412; border-color:#fed7aa; }
-/* Completed = เทาอ่อน */
-.b-completed{ background:#f1f5f9; color:#334155; border-color:#d7dee8; }
-/* Cancelled = เทาเข้ม */
-.b-cancelled{ background:#e5e7eb; color:#111827; border-color:#9ca3af; }
-/* Pending / Unknown */
-.b-pending{ background:#f3f4f6; color:#374151; border-color:#e5e7eb; }
-/* Activated = เขียวอมฟ้า (teal) */
-.b-activated{ background:#d1fae5; color:#065f46; border-color:#6ee7b7; }
-
-/* Aborted = ชมพูแดง (แยกจาก Cancelled) */
-.b-aborted{ background:#ffe4e6; color:#9f1239; border-color:#fecdd3; }
-
+  .b-scheduled{ background:#f3e8ff; color:#6b21a8; border-color:#d8b4fe; }
+  .b-preparing{ background:#e0f2fe; color:#075985; border-color:#bae6fd; }
+  .b-delayed{ background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+  .b-transporting{ background:#dcfce7; color:#166534; border-color:#86efac; }
+  .b-returning{ background:#ffedd5; color:#9a3412; border-color:#fed7aa; }
+  .b-completed{ background:#f1f5f9; color:#334155; border-color:#d7dee8; }
+  .b-cancelled{ background:#e5e7eb; color:#111827; border-color:#9ca3af; }
+  .b-pending{ background:#f3f4f6; color:#374151; border-color:#e5e7eb; }
+  .b-activated{ background:#d1fae5; color:#065f46; border-color:#6ee7b7; }
+  .b-aborted{ background:#ffe4e6; color:#9f1239; border-color:#fecdd3; }
 
   .tinyNote{ font-size:12px; color:#6b7280; margin:10px 2px 0; }
 
@@ -550,187 +536,159 @@ tbody tr:hover{ background:#fafcff; }
   }
 
   /* ===== Status Icons ===== */
-.statusCell{
-  display:flex;
-  align-items:center;
-  gap:6px;
-}
-.statusIcons{
-  display:inline-flex;
-  align-items:center;
-  gap:4px;
-}
-.statusIcons svg{
-  width:22px !important;
-  height:22px !important;
-  stroke-width:2.4;
-  color:currentColor;
-}
+  .statusCell{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .statusIcons{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+  }
+  .statusIcons svg{
+    width:22px !important;
+    height:22px !important;
+    stroke-width:2.4;
+    color:currentColor;
+  }
 
   /* ===== Group Toggle Bar (keep button on same line) ===== */
-.groupToggleBar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  flex-wrap:nowrap;           /* ✅ ห้ามตกบรรทัด */
-}
-.groupToggleLeft{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  min-width:0;
-  flex:1 1 auto;
-}
-.groupToggleLeft span:first-child{
-  white-space:nowrap;         /* ✅ หัวข้อไม่แตกบรรทัด */
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-.groupToggleCount{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  min-width:28px;
-  height:22px;
-  padding:0 8px;
-  border-radius:999px;
-  background:#e5e7eb;
-  font-weight:900;
-  font-size:12px;
-}
-.group-toggle .btn{
-  flex:0 0 auto;
-  white-space:nowrap;         /* ✅ ปุ่ม Hide/Show ไม่แตกบรรทัด */
-}
+  .groupToggleBar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:nowrap;
+  }
+  .groupToggleLeft{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+    flex:1 1 auto;
+  }
+  .groupToggleLeft span:first-child{
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .groupToggleCount{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:28px;
+    height:22px;
+    padding:0 8px;
+    border-radius:999px;
+    background:#e5e7eb;
+    font-weight:900;
+    font-size:12px;
+  }
+  .group-toggle .btn{
+    flex:0 0 auto;
+    white-space:nowrap;
+  }
 
-/* ===== Status Icons (color driven by CSS) ===== */
-.statusIcons svg{
-  width:22px !important;
-  height:22px !important;
-  stroke-width:2.4;
-  color:currentColor; /* optional */
-}
+  /* สีของ icon แต่ละสถานะ */
+  .statusIcons.preparing{ color:#075985; }
+  .statusIcons.delayed{ color:#991b1b; }
+  .statusIcons.transporting{ color:#166534; }
+  .statusIcons.returning{ color:#9a3412; }
 
-/* สีของ icon แต่ละสถานะ */
-.statusIcons.preparing{ color:#075985; }     /* ฟ้า */
-.statusIcons.delayed{ color:#991b1b; }       /* แดง */
-.statusIcons.transporting{ color:#166534; }  /* เขียว */
-.statusIcons.returning{ color:#9a3412; }     /* ส้ม */
-
-/* ===== STAMP FOOTER ACTIONS (buttons layout) ===== */
-.stampFooterActions{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-  align-items:center;
-  margin-left:auto;
-}
-
-/* Save & Exit = normal / safe action */
-#saveExitBtn{
-  border:1px solid #d1d5db;
-}
-
-/* Mark Completed = final & important */
-#markCompletedBtn{
-  min-width:160px;
-}
-
-@media (max-width: 520px){
+  /* ===== STAMP FOOTER ACTIONS (buttons layout) ===== */
   .stampFooterActions{
-    width:100%;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    align-items:center;
+    margin-left:auto;
   }
-  .stampFooterActions .btn{
-    flex:1;
-    width:100%;
+
+  #saveExitBtn{
+    border:1px solid #d1d5db;
   }
-}
 
-/* td ต้องเป็น table-cell ปกติ */
-td.col-type,
-td.col-from,
-td.col-to{
-  white-space: normal;
-  overflow: hidden;
-  vertical-align: top;
-}
+  #markCompletedBtn{
+    min-width:160px;
+  }
 
-.clamp1{
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-.clamp2{
-  display:-webkit-box;
-  -webkit-box-orient:vertical;
-  -webkit-line-clamp:2;
-  overflow:hidden;
-  line-height:1.25;
-}
+  @media (max-width: 520px){
+    .stampFooterActions{
+      width:100%;
+    }
+    .stampFooterActions .btn{
+      flex:1;
+      width:100%;
+    }
+  }
 
+  td.col-type,
+  td.col-from,
+  td.col-to{
+    white-space: normal;
+    overflow: hidden;
+    vertical-align: top;
+  }
 
-/* ===== Column width (เหมือน operation.html) ===== */
+  .clamp1{
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .clamp2{
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+    overflow:hidden;
+    line-height:1.25;
+  }
 
-/* Mission ID */
-th:nth-child(1),
-td:nth-child(1){
-  min-width: 100px;
-  white-space: nowrap;
-  font-weight: 900;
-}
+  /* ===== Column width (เหมือน operation.html) ===== */
+  th:nth-child(1),
+  td:nth-child(1){
+    min-width: 100px;
+    white-space: nowrap;
+    font-weight: 900;
+  }
+  th:nth-child(2),
+  td:nth-child(2){
+    min-width: 80px;
+    white-space: nowrap;
+  }
+  th:nth-child(4),
+  td:nth-child(4){
+    min-width: 160px;
+  }
+  th:nth-child(5),
+  td:nth-child(5){
+    min-width: 300px;
+  }
+  th:nth-child(6),
+  td:nth-child(6){
+    min-width: 300px;
+  }
+  th:nth-child(8),
+  td:nth-child(8){
+    min-width: 260px;
+    white-space: nowrap;
+  }
 
-/* Date */
-th:nth-child(2), 
-td:nth-child(2){
-  min-width: 80px;
-  white-space: nowrap;
-}
+  table th,
+  table td{
+    text-align: center;
+    vertical-align: middle;
+  }
 
-/* Mission Type */
-th:nth-child(4),
-td:nth-child(4){
-  min-width: 160px;
-}
-
-/* From */
-th:nth-child(5), 
-td:nth-child(5){
-  min-width: 300px;
-}
-
-/* To */
-th:nth-child(6), 
-td:nth-child(6){
-  min-width: 300px;
-}
-
-/* Actions */
-th:nth-child(8), 
-td:nth-child(8){
-  min-width: 260px;
-  white-space: nowrap;
-}
-
-/* ===== Alignment ===== */
-table th,
-table td{
-  text-align: center;
-  vertical-align: middle;
-}
-
-/* Text-heavy columns = left */
-table th:nth-child(4),
-table td:nth-child(4),
-table th:nth-child(5),
-table td:nth-child(5),
-table th:nth-child(6),
-table td:nth-child(6){
-  text-align: left;
-}
-
-
+  table th:nth-child(4),
+  table td:nth-child(4),
+  table th:nth-child(5),
+  table td:nth-child(5),
+  table th:nth-child(6),
+  table td:nth-child(6){
+    text-align: left;
+  }
 </style>
 </head>
 
@@ -751,11 +709,9 @@ table td:nth-child(6){
   </div>
 </div>
 
-
 <div class="content">
   <h1>Operation</h1>
   <div id="clock">--:--:--</div>
-  
 
   <div class="actionbar">
     <div class="muted">Read-only dashboard • กด “On Duty” เพื่อ stamp เวลา</div>
@@ -822,14 +778,16 @@ table td:nth-child(6){
     <div class="modalFooter">
       <div class="footerLeft">
         <button class="btn pill onDuty" id="openStampBtn" type="button"
-    onclick="if(currentMissionId) openStamp(currentMissionId)">
-    On Duty
-  </button>
+          onclick="if(currentMissionId) openStamp(currentMissionId)">
+          On Duty
+        </button>
+
         <button class="btn danger" id="cancelMissionBtn" type="button"
-    onclick="openCancelDialog()">
-    Cancel mission
-  </button>
-  <button class="btn light" id="closeModalBtn" type="button">Close</button>
+          onclick="openCancelDialog()">
+          Cancel mission
+        </button>
+
+        <button class="btn light" id="closeModalBtn" type="button">Close</button>
       </div>
     </div>
   </div>
@@ -870,7 +828,6 @@ table td:nth-child(6){
         <button class="btn secondary" id="saveExitBtn" type="button">Save & Exit</button>
       </div>
     </div>
-
   </div>
 </div>
 
@@ -939,11 +896,11 @@ table td:nth-child(6){
   </div>
 </div>
 
-
 <script>
 /* =========================================================
    ERROR BOX (เห็น error บนจอทันที)
 ========================================================= */
+
 (function(){
   function showErr(msg){
     let box = document.getElementById("__errbox");
@@ -968,11 +925,16 @@ table td:nth-child(6){
 })();
 
 /* =========================================================
-   STORAGE / BASIC HELPERS
+   STORAGE / BASIC HELPERS  ✅ (Firestore source-of-truth + safe sync)
 ========================================================= */
 const STORAGE_KEY = "SCC_MISSIONS_V1";
 const SYNC_CHANNEL_NAME = "SCC_SYNC_V1";
 
+// ✅ Firestore is the source of truth (operation.html)
+window.DATA_SOURCE = "firestore";
+window.FIRESTORE_MISSIONS = Array.isArray(window.FIRESTORE_MISSIONS) ? window.FIRESTORE_MISSIONS : [];
+
+/* ---------- small utils ---------- */
 function pad2(n){ return String(n).padStart(2,'0'); }
 function toISODateLocal(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
 function getTodayISO(){ return toISODateLocal(new Date()); }
@@ -984,36 +946,119 @@ function escapeHtml(s){
   }[m]));
 }
 
-function readMissions(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
-  }catch{ return []; }
-}
-
+/* =========================================================
+   SYNC (BroadcastChannel + storage ping) ✅
+========================================================= */
 function emitSync(eventName, payload = {}){
+  const msg = { eventName: String(eventName || "SYNC"), payload: payload || {}, at: Date.now() };
+
   try{
     if ("BroadcastChannel" in window){
       const ch = new BroadcastChannel(SYNC_CHANNEL_NAME);
-      ch.postMessage({ eventName, payload, at: Date.now() });
+      ch.postMessage(msg);
       ch.close?.();
     }
   }catch{}
+
   try{
-    localStorage.setItem("__SCC_SYNC_PING__", JSON.stringify({ eventName, payload, at: Date.now() }));
+    localStorage.setItem("__SCC_SYNC_PING__", JSON.stringify(msg));
   }catch{}
 }
 
-function writeMissions(arr){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-  emitSync("MISSIONS_UPDATED", {});
+/* =========================================================
+   MISSIONS READ/WRITE ✅ (MERGE firestore + local cache)
+========================================================= */
+
+function _getRecencyISO(m){
+  // เอา field ที่ “ใหม่สุด” ที่เรามี มาใช้ตัดสินว่าอันไหนควรถูกเลือก
+  // (อย่าใช้ updatedAt เพราะเป็น serverTimestamp object บางทีเทียบยาก)
+  return String(
+    m?.details?.OperationStamp?.lastUpdatedAt ||
+    m?.details?.statusChangedAt ||
+    m?.details?.cancel?.cancelledAtISO ||
+    m?.details?.OperationStamp?.startedAt ||
+    ""
+  );
 }
+
+function _mergeById(preferArr, fallbackArr){
+  const map = new Map();
+
+  // ใส่ fallback ก่อน
+  (Array.isArray(fallbackArr) ? fallbackArr : []).forEach(m => {
+    const id = String(m?.id || "");
+    if (id) map.set(id, m);
+  });
+
+  // ใส่ prefer ทับ โดยเลือก “ใหม่กว่า” ถ้ามีทั้งคู่
+  (Array.isArray(preferArr) ? preferArr : []).forEach(m => {
+    const id = String(m?.id || "");
+    if (!id) return;
+
+    const old = map.get(id);
+    if (!old){
+      map.set(id, m);
+      return;
+    }
+
+    const a = _getRecencyISO(m);
+    const b = _getRecencyISO(old);
+
+    // ถ้า prefer ใหม่กว่า → ทับ
+    if (a && (!b || a >= b)){
+      map.set(id, m);
+    } else {
+      // ไม่งั้นเก็บของเดิม
+      map.set(id, old);
+    }
+  });
+
+  return Array.from(map.values());
+}
+
+function readMissions(){
+  // 1) local cache (กันของหาย/กันรอ snapshot)
+  let localArr = [];
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    localArr = Array.isArray(arr) ? arr : [];
+  }catch{ localArr = []; }
+
+  // 2) firestore snapshot
+  const fsArr = Array.isArray(window.FIRESTORE_MISSIONS) ? window.FIRESTORE_MISSIONS : [];
+
+  if ((window.DATA_SOURCE || "local") === "firestore"){
+    // ✅ ถ้า Firestore มีข้อมูลแล้ว -> ใช้ Firestore ล้วน
+    if (fsArr.length) return fsArr;
+
+    // ✅ ถ้า Firestore ยังไม่มา -> ใช้ local พยุงชั่วคราว
+    return localArr;
+  }
+
+  return localArr;
+}
+
+
+function writeMissions(arr){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.isArray(arr) ? arr : []));
+  }catch{}
+  emitSync("MISSIONS_UPDATED", { n: Array.isArray(arr) ? arr.length : 0 });
+}
+
+// ✅ ให้ Firestore module เรียกได้แน่ ๆ
+window.readMissions  = window.readMissions  || readMissions;
+window.writeMissions = window.writeMissions || writeMissions;
+
+/* =========================================================
+   DATE + STATUS HELPERS
+========================================================= */
 
 /* Robust mission date getter (หลาย field) */
 function getMissionDateISO(m){
   const candidates = [
-    m?.date, m?.dateISO, m?.missionDate,
+    m?.date, m?.dateISO, m?.missionDate, m?.missionDateISO,
     m?.details?.date, m?.details?.dateISO, m?.details?.missionDate, m?.details?.missionDateISO
   ];
   for (const v of candidates){
@@ -1023,12 +1068,58 @@ function getMissionDateISO(m){
   return "";
 }
 
+/* ✅ MUST match index.html */
 function normStatus(s){
-  const x = String(s ?? "").trim();
-  return x || "Scheduled";
+  const raw = String(s ?? "").trim();
+  if (!raw) return "Scheduled";
+
+  const k = raw.toLowerCase();
+
+  if (k === "activated") return "Activated";
+  if (k === "scheduled") return "Scheduled";
+  if (k === "preparing") return "Preparing";
+  if (k === "delayed") return "Delayed";
+  if (k === "transporting") return "Transporting";
+  if (k === "returning") return "Returning";
+  if (k === "completed") return "Completed";
+  if (k === "cancelled" || k === "canceled") return "Cancelled";
+  if (k === "aborted") return "Aborted";
+  if (k === "pending") return "Pending";
+
+  return raw;
 }
-function badgeClassFromStatus(s){
-  const x = normStatus(s).toLowerCase();
+
+/* ✅ MUST match index.html: accept mission OR string */
+function getRawStatus(m){
+  const d = (m && m.details) ? m.details : {};
+  const candidates = [
+    m?.status,
+    d?.status,
+    d?.Status,
+    d?.missionStatus,
+    d?.statusText,
+    d?.statusKey
+  ];
+  for (const v of candidates){
+    const s = String(v ?? "").trim();
+    if (s) return s;
+  }
+  return "";
+}
+
+function getStatus(m){
+  return normStatus(getRawStatus(m));
+}
+
+/* ✅ badge class: accept mission OR string */
+function badgeClassFromStatus(sOrMission){
+  const raw = (typeof sOrMission === "object")
+    ? getRawStatus(sOrMission)
+    : String(sOrMission ?? "");
+
+  const x = normStatus(raw).toLowerCase();
+
+  if (x === "activated") return "b-activated";
   if (x === "scheduled") return "b-scheduled";
   if (x === "preparing") return "b-preparing";
   if (x === "delayed") return "b-delayed";
@@ -1036,6 +1127,7 @@ function badgeClassFromStatus(s){
   if (x === "returning") return "b-returning";
   if (x === "completed") return "b-completed";
   if (x === "cancelled") return "b-cancelled";
+  if (x === "aborted") return "b-aborted";
   return "b-pending";
 }
 
@@ -1060,15 +1152,6 @@ function getCancelISO(m){
 /* =========================================================
    STATUS HELPERS (SINGLE SOURCE OF TRUTH) ✅
 ========================================================= */
-function getRawStatus(m){
-  return (m && (m.status ?? m.details?.status)) ?? "";
-}
-
-function getStatus(m){
-  return normStatus(getRawStatus(m));
-}
-
-/* ✅ เวลา set status: เขียนทั้ง m.status และ m.details.status กันข้อมูลเก่าปน */
 function setStatus(m, newStatus){
   if (!m) return;
   const s = normStatus(newStatus);
@@ -1076,39 +1159,51 @@ function setStatus(m, newStatus){
   m.details = m.details || {};
   m.details.status = s;
 }
+
 function setStatusWithLog(m, newStatus, by, source, note){
   if (!m) return;
 
   const prev = getStatus(m);
   const next = normStatus(newStatus);
 
-  // set status (เขียนทั้ง 2 ที่ให้ชัวร์)
+  if (normStatus(prev) === normStatus(next)) return;
+
   setStatus(m, next);
 
-  // status log
   m.details = m.details || {};
-  if (!Array.isArray(m.details.statusLog)) m.details.statusLog = [];
+  if (!Array.isArray(m.details.statusChangeLog)) m.details.statusChangeLog = [];
 
-  // log เฉพาะตอนเปลี่ยนจริง
-  if (normStatus(prev) !== normStatus(next)){
-    m.details.statusLog.push({
-      atISO: nowISO(),
-      from: prev,
-      to: next,
-      by: String(by || "Unknown"),
-      source: String(source || ""),
-      note: String(note || "")
-    });
-  }
+  m.details.statusChangeLog.push({
+    from: prev,
+    to: next,
+    at: nowISO(),
+    by: String(by || "Unknown"),
+    source: String(source || ""),
+    note: String(note || "")
+  });
+
+  m.details.statusChangedAt = nowISO();
 }
 
-function isCancelled(m){
-  return getStatus(m) === "Cancelled";
-}
-function isActivated(m){
-  return getStatus(m) === "Activated";
+function setMissionDateISO(m, isoDate){
+  if (!m) return;
+  const d = String(isoDate || "").slice(0,10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+
+  m.date = d;
+  m.dateISO = d;
+  m.missionDate = d;
+  m.missionDateISO = d;
+
+  m.details = m.details || {};
+  m.details.date = d;
+  m.details.dateISO = d;
+  m.details.missionDate = d;
+  m.details.missionDateISO = d;
 }
 
+function isCancelled(m){ return getStatus(m) === "Cancelled"; }
+function isActivated(m){ return getStatus(m) === "Activated"; }
 
 /* =========================================================
    WORKLOAD DATE + GROUPING
@@ -1119,18 +1214,16 @@ function daysDiffISO(fromISODate, toISODate){
   return Math.round((b - a) / (24*60*60*1000));
 }
 
-// วันนี้ view: เอา today + backlog ด้วยกติกา workload
 function getWorkloadDateISO(m, todayISO){
-  const status = getStatus(m);
-
+  const status = normStatus(getRawStatus(m));
 
   if (status === "Cancelled"){
     const cISO = getCancelISO(m);
-    return cISO ? String(cISO).slice(0,10) : (getMissionDateISO(m) || todayISO);
+    return cISO ? isoToISODate(cISO) : (getMissionDateISO(m) || todayISO);
   }
 
   const adISO = getStepISO(m, "actual_departure");
-  if (adISO) return String(adISO).slice(0,10);
+  if (adISO) return isoToISODate(adISO);
 
   const req = getMissionDateISO(m);
   if (req && req > todayISO) return req;
@@ -1142,7 +1235,7 @@ function isCarryOver(m, selectedDateISO){
   const req = getMissionDateISO(m);
   const wl  = getWorkloadDateISO(m, selectedDateISO);
   const started = !!getStepISO(m, "actual_departure");
-  const cancelled = (normStatus(m?.status) === "Cancelled");
+  const cancelled = (getStatus(m) === "Cancelled");
   return (!started && !cancelled && wl === selectedDateISO && req && req < selectedDateISO);
 }
 
@@ -1155,7 +1248,7 @@ function carryOverLabel(m, selectedDateISO){
 }
 
 /* =========================================================
-   COLLAPSE (SINGLE) ✅
+   COLLAPSE (SINGLE) ✅ (safe render)
 ========================================================= */
 function _collapseKey(name){
   return "SCC_COLLAPSE_" + String(name||"").toUpperCase();
@@ -1168,7 +1261,10 @@ function setCollapsed(name, v){
 }
 function toggleGroup(name){
   setCollapsed(name, !isCollapsed(name));
-  safeRender(); // ✅ operation.html ใช้ safeRender ตลอด
+  try{
+    if (typeof safeRender === "function") safeRender();
+    else if (typeof render === "function") render();
+  }catch{}
 }
 
 function dividerRow(){
@@ -1178,9 +1274,8 @@ function groupHeaderRow(kind, count){
   const collapsed = isCollapsed(kind);
 
   let title = "Done";
-if (kind === "completed") title = "Completed";
-else if (kind === "done") title = "Completed + Cancelled";
-
+  if (kind === "completed") title = "Completed";
+  else if (kind === "done") title = "Completed + Cancelled";
 
   const btnText = collapsed ? "Show" : "Hide";
 
@@ -1189,10 +1284,7 @@ else if (kind === "done") title = "Completed + Cancelled";
       <td colspan="8">
         <div class="groupToggleBar">
           <div class="groupToggleLeft">
-            <span ${kind === "done" ? 'style="font-weight:900;"' : ""}>
-  ${escapeHtml(title)}
-</span>
-
+            <span ${kind === "done" ? 'style="font-weight:900;"' : ""}>${escapeHtml(title)}</span>
             <span class="groupToggleCount">${count}</span>
           </div>
           <button class="btn light tiny" type="button" onclick="toggleGroup('${escapeHtml(kind)}')">${escapeHtml(btnText)}</button>
@@ -1334,38 +1426,33 @@ function toLocalDateTime(dateISO, timeHHMM){
   d.setHours(h||0, m||0, 0, 0);
   return d;
 }
-function autoUpdatePreparingDelayed(missions){
-  let changed = false;
-  const now = new Date();
+// ✅ แทน autoUpdateStatuses: ไม่ mutate mission แล้ว
+function autoComputeStatus(m){
+  const cur = normStatus(getRawStatus(m));
 
-  missions.forEach(m => {
-    const cur = normStatus(m.status);
-    if (!["Scheduled","Preparing","Delayed"].includes(cur)) return;
+  // สถานะที่ “ห้ามยุ่ง”
+  if (["Activated","Transporting","Returning","Completed","Cancelled","Aborted"].includes(cur)) return cur;
 
-    const d = m.details || {};
-    const dep = d.departureFromHospital;
-    const dateISO = getMissionDateISO(m);
-    if (!dep || !dateISO) return;
+  // ใช้เฉพาะ 3 สถานะนี้ในการ auto
+  if (!["Scheduled","Preparing","Delayed"].includes(cur)) return cur;
 
-    const depDT = toLocalDateTime(dateISO, dep);
-    if (!depDT) return;
+  const d = m.details || {};
+  const dep = d.departureFromHospital || d.departureOriginal || "";
+  const dateISO = getMissionDateISO(m);
+  if (!dep || !dateISO) return cur;
 
-    const diffMin = (depDT - now) / 60000;
+  const depDT = toLocalDateTime(dateISO, dep);
+  if (!depDT) return cur;
 
-    if (cur === "Scheduled" && diffMin <= 30 && diffMin > 0){
-  setStatus(m, "Preparing"); changed = true; return;
+  const diffMin = (depDT - new Date()) / 60000;
+
+  if (cur === "Scheduled" && diffMin <= 30 && diffMin > 0) return "Preparing";
+  if ((cur === "Scheduled" || cur === "Preparing") && diffMin <= 0) return "Delayed";
+  if (cur === "Delayed" && diffMin > 0) return "Preparing";
+
+  return cur;
 }
-if ((cur === "Scheduled" || cur === "Preparing") && diffMin <= 0){
-  setStatus(m, "Delayed"); changed = true; return;
-}
-if (cur === "Delayed" && diffMin > 0){
-  setStatus(m, "Preparing"); changed = true; return;
-}
 
-  });
-
-  return changed;
-}
 
 /* =========================================================
    STATUS ICONS
@@ -1400,7 +1487,6 @@ const ICON_DELAYED_1 = `
   <path d="M6.38 18.7 4 21"/><path d="M17.64 18.67 20 21"/>
 </svg>`;
 
-
 function getStatusIconsHTML(status){
   const s = normStatus(status);
   if (s === "Preparing") return `<span class="statusIcons preparing">${ICON_PREPARING_1}</span>`;
@@ -1409,7 +1495,29 @@ function getStatusIconsHTML(status){
   if (s === "Returning") return `<span class="statusIcons returning">${ICON_RETURNING_1}${ICON_RETURNING_2}</span>`;
   return "";
 }
+function getAutoStatusForDisplay(m){
+  const cur = normStatus(getRawStatus(m));
 
+  // สถานะพวกนี้ห้าม auto เปลี่ยน (และไม่แตะ Firestore)
+  if (["Activated","Transporting","Returning","Completed","Cancelled"].includes(cur)) return cur;
+  if (!["Scheduled","Preparing","Delayed"].includes(cur)) return cur;
+
+  const d = m.details || {};
+  const dep = d.departureFromHospital || d.departureOriginal || "";
+  const dateISO = getMissionDateISO(m);
+  if (!dep || !dateISO) return cur;
+
+  const depDT = toLocalDateTime(dateISO, dep);
+  if (!depDT) return cur;
+
+  const diffMin = (depDT - new Date()) / 60000;
+
+  if (cur === "Scheduled" && diffMin <= 30 && diffMin > 0) return "Preparing";
+  if ((cur === "Scheduled" || cur === "Preparing") && diffMin <= 0) return "Delayed";
+  if (cur === "Delayed" && diffMin > 0) return "Preparing";
+
+  return cur;
+}
 
 /* =========================================================
    DEPARTURE CELL (strike original + show current)
@@ -1442,52 +1550,6 @@ function fmt(v){ return v ? escapeHtml(v) : '<span class="muted">-</span>'; }
 function section(title, rows){
   const kv = rows.map(([k,v]) => `<div class="k">${escapeHtml(k)}</div><div class="v">${v}</div>`).join("");
   return `<div class="section"><h3>${escapeHtml(title)}</h3><div class="kv">${kv}</div></div>`;
-}
-
-function renderStampHistory(m){
-  const op = (m.details || {}).OperationStamp;
-  if (!op || !Array.isArray(op.steps) || !op.steps.length) return '<span class="muted">-</span>';
-
-  const items = [...op.steps]
-    .sort((a,b)=> String(a.tsISO||"").localeCompare(String(b.tsISO||"")))
-    .map(s => {
-      const t = s.tsISO ? new Date(s.tsISO) : null;
-      const tt = t ? t.toLocaleString("th-TH") : "-";
-      const by = s.by || "-";
-      const note = s.note ? ` • <span class="muted">${escapeHtml(s.note)}</span>` : "";
-      return `<div style="margin:0 0 8px;">
-        <div><strong>${escapeHtml(s.label || s.key || "-")}</strong></div>
-        <div class="muted" style="font-size:12px;">${escapeHtml(tt)} • by: ${escapeHtml(by)}${note}</div>
-      </div>`;
-    }).join("");
-
-  return items;
-}
-
-function renderStatusLog(m){
-  const log = m?.details?.statusLog;
-  if (!Array.isArray(log) || !log.length) return '<span class="muted">-</span>';
-
-  const items = [...log]
-    .sort((a,b)=> String(a.atISO||"").localeCompare(String(b.atISO||"")))
-    .map(x => {
-      const t = x.atISO ? new Date(x.atISO).toLocaleString("th-TH") : "-";
-      const from = x.from || "-";
-      const to = x.to || "-";
-      const by = x.by || "-";
-      const src = x.source ? ` • <span class="muted">${escapeHtml(x.source)}</span>` : "";
-      const note = x.note ? ` • <span class="muted">${escapeHtml(x.note)}</span>` : "";
-      return `
-        <div style="margin:0 0 8px;">
-          <div><strong>${escapeHtml(from)} → ${escapeHtml(to)}</strong></div>
-          <div class="muted" style="font-size:12px;">
-            ${escapeHtml(t)} • by: ${escapeHtml(by)}${src}${note}
-          </div>
-        </div>
-      `;
-    }).join("");
-
-  return items || '<span class="muted">-</span>';
 }
 
 function renderDetails(m){
@@ -1533,11 +1595,9 @@ function renderDetails(m){
     ["To pin (lat,lng)", (p.toLat && p.toLng) ? fmt(`${p.toLat}, ${p.toLng}`) : '<span class="muted">-</span>']
   ]));
 
-  blocks.push(section("Status Change Log — ประวัติการเปลี่ยนสถานะ", [
-  ["History", renderStatusLog(m)]
-]));
-
   const timeRows = [];
+  if (p.baseLocation !== undefined) timeRows.push(["Base (SNH/SMCH)", fmt(p.baseLocation)]);
+
   const orig = p.departureOriginal || "";
   const cur  = p.departureFromHospital || "";
   if (cur || orig){
@@ -1548,32 +1608,44 @@ function renderDetails(m){
       timeRows.push(["Departure from SNH/SMCH hospital", fmt(cur || orig)]);
     }
   }
+
+  if (p.preDepartureBriefing) timeRows.push(["Pre-departure Briefing", fmt(p.preDepartureBriefing)]);
+  if (p.schedArriveRefHosp)   timeRows.push(["Scheduled Arrival at Referring Hospital", fmt(p.schedArriveRefHosp)]);
+  if (p.schedArriveAirport)   timeRows.push(["Scheduled Arrival at Airport", fmt(p.schedArriveAirport)]);
+  if (p.schedFlightArrive)    timeRows.push(["Scheduled Flight Arrival", fmt(p.schedFlightArrive)]);
+  if (p.schedFlightDepart)    timeRows.push(["Scheduled Flight Departure", fmt(p.schedFlightDepart)]);
+  if (p.schedArriveHome)      timeRows.push(["Scheduled Arrival at Home", fmt(p.schedArriveHome)]);
+
   blocks.push(section("Time Log — บันทึกเวลา", timeRows.length ? timeRows : [["(No time log)", '<span class="muted">-</span>']]));
 
+  // ✅ กันพัง ถ้าฟังก์ชันยังไม่มี/ชื่อไม่ตรง
   blocks.push(section("Operation Stamp — ประวัติ stamp", [
-    ["History", renderStampHistory(m)]
+    ["History", (typeof renderStampHistory === "function")
+      ? renderStampHistory(m)
+      : '<span class="muted">-</span>'
+    ]
+  ]));
+
+  blocks.push(section("Status Change Log — ประวัติการเปลี่ยนสถานะ", [
+    ["History", (typeof renderStatusLog === "function")
+      ? renderStatusLog(m)
+      : '<span class="muted">-</span>'
+    ]
   ]));
 
   blocks.push(section("Mission", [
-    ["Mission Type (table label)", fmt(getTypeLabelForTable(m))],
+    ["Mission Group", fmt(m.missionGroup)],
+    ["Mission Type (stored)", fmt(m.type)],
+    ["Display Label (stored)", fmt(m.typeDisplay)],
     ["Type Key", fmt(m.typeKey)],
-    ["Status", `<span class="badge ${badgeClassFromStatus(m.status)}">${escapeHtml(normStatus(m.status))}</span>`],
+    ["Mission Type (table label)", fmt(getTypeLabelForTable(m))],
+    ["Status", `<span class="badge ${badgeClassFromStatus(m)}">${escapeHtml(getStatus(m))}</span>`],
     ["Notes", fmt(m.notes)]
   ]));
 
-  if (p.cancel){
-  blocks.push(section("Cancel Info", [
-    ["Reason", fmt(p.cancel.reason || p.cancel.reasonKey)],
-    ["Cancelled By", fmt(p.cancel.cancelledBy)],
-    ["Cancelled At", fmt(p.cancel.cancelledAtISO ? new Date(p.cancel.cancelledAtISO).toLocaleString("th-TH") : "")],
-    ["Source", fmt(p.cancel.source)],
-    ["Device", fmt(p.cancel.deviceId)]
-  ]));
-}
-
-
   return blocks.join("");
 }
+
 
 /* =========================================================
    PATTERNS (same logic as before, keep)
@@ -1781,8 +1853,20 @@ let currentMissionId = null;
 if (typeof window.stampMissionId === "undefined") window.stampMissionId = null;
 
 /* =========================================================
-   TOP STATS  ✅ include Cancelled in Total (Day/Year)
+   TOP STATS ✅ Total (Year/Day) = all missions except deleted
+   - include Completed + Cancelled
+   - exclude deleted / soft-deleted
+   - year based on selectedDateISO's year
 ========================================================= */
+function isDeletedMission(m){
+  if (!m) return true;
+  const d = m.details || {};
+  return !!(
+    m.isDeleted || m._deleted || m.deleted || m.deletedAt ||
+    d.isDeleted || d._deleted || d.deleted || d.deletedAt
+  );
+}
+
 function updateTopStatsFromSelectedDate(all, selectedDateISO){
   const yearEl = document.getElementById("total");
   const tEl    = document.getElementById("todayTotal");
@@ -1791,11 +1875,14 @@ function updateTopStatsFromSelectedDate(all, selectedDateISO){
   const cEl    = document.getElementById("completedN");
   const xEl    = document.getElementById("cancelledN");
 
-  const sel  = selectedDateISO || getTodayISO();
+  const sel  = String(selectedDateISO || getTodayISO()).slice(0,10);
   const year = sel.slice(0,4);
 
-  const inYear = all.filter(m => (getMissionDateISO(m) || "").slice(0,4) === year);
-  const inDay  = all.filter(m => getMissionDateISO(m) === sel);
+  // ✅ filter deleted ออกก่อนนับทุกตัวเลข
+  const cleanAll = (Array.isArray(all) ? all : []).filter(m => !isDeletedMission(m));
+
+  const inYear = cleanAll.filter(m => (getMissionDateISO(m) || "").slice(0,4) === year);
+  const inDay  = cleanAll.filter(m => getMissionDateISO(m) === sel);
 
   const activeSet = new Set(["Preparing","Delayed","Transporting","Returning"]);
 
@@ -1804,8 +1891,10 @@ function updateTopStatsFromSelectedDate(all, selectedDateISO){
 
   const activeDay = inDay.filter(m => activeSet.has(normStatus(getRawStatus(m)))).length;
   const remSched  = inDay.filter(m => normStatus(getRawStatus(m)) === "Scheduled").length;
+
+  // ✅ ใช้ normStatus ตรง ๆ ให้ consistent
   const compDay   = inDay.filter(m => normStatus(getRawStatus(m)) === "Completed").length;
-  const cancDay   = inDay.filter(m => isCancelled(m)).length;
+  const cancDay   = inDay.filter(m => normStatus(getRawStatus(m)) === "Cancelled").length;
 
   if (yearEl) yearEl.textContent = String(totalYear);
   if (tEl)    tEl.textContent    = String(totalDay);
@@ -1820,6 +1909,7 @@ function updateTopStatsFromSelectedDate(all, selectedDateISO){
     title.textContent = isToday ? "Today’s Missions" : `Missions — ${sel}`;
   }
 }
+
 
 /* =========================================================
    FILTERS
@@ -1857,18 +1947,113 @@ function renderTable(rows, selectedDate){
   const isTodayView = (String(selectedDate || "") === todayISO);
 
   // =========================
-// ไม่ใช่วันนี้ → แสดงแบบเดิม
-// =========================
-if (!isTodayView){
-  if (!Array.isArray(rows) || !rows.length){
-    tb.innerHTML = `<tr><td colspan="8" class="muted">No missions</td></tr>`;
-    if (cn) cn.textContent = "0 missions";
+  // ไม่ใช่วันนี้ → แสดงแบบเดิม
+  // =========================
+  if (!isTodayView){
+    if (!Array.isArray(rows) || !rows.length){
+      tb.innerHTML = `<tr><td colspan="8" class="muted">No missions</td></tr>`;
+      if (cn) cn.textContent = "0 missions";
+      return;
+    }
+
+    tb.innerHTML = rows.map(m => {
+      const ft = getFromTo(m);
+      const s = autoComputeStatus(m);
+
+
+      return `
+        <tr>
+          <td><strong>${escapeHtml(m.id || "-")}</strong></td>
+          <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
+          <td>${formatDepartureCell(m)}</td>
+
+          <!-- ✅ Mission Type = 2 lines -->
+          <td class="col-type">
+            <div class="clamp2">${escapeHtml(getTypeLabelForTable(m))}</div>
+          </td>
+
+          <!-- ✅ From/To = 1 line -->
+          <td class="col-from">
+            <div class="clamp1">${escapeHtml(ft.from || "-")}</div>
+          </td>
+          <td class="col-to">
+            <div class="clamp1">${escapeHtml(ft.to || "-")}</div>
+          </td>
+
+          <td>
+            <div class="statusCell">
+              <span class="badge ${badgeClassFromStatus(s)}">${escapeHtml(s)}</span>
+              ${getStatusIconsHTML(s)}
+            </div>
+          </td>
+
+          <td>
+            <div class="actionCell">
+              <button class="btn light tiny" type="button" onclick="openDetails('${escapeHtml(m.id)}')">Details</button>
+              ${
+                (() => {
+                  const st = getTableOnDutyBtnState(m);
+                  return `<button class="btn pill tiny ${st.cls}" type="button" onclick="openStamp('${escapeHtml(m.id)}')">${escapeHtml(st.text)}</button>`;
+                })()
+              }
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    if (cn) cn.textContent = `${rows.length} missions`;
     return;
   }
 
-  tb.innerHTML = rows.map(m => {
+  // =========================
+  // วันนี้: Active + Done (Completed/Cancelled) แบบ collapsible
+  // =========================
+  const all = Array.isArray(rows) ? rows : [];
+
+  function hasStarted(m){ return !!getStepISO(m, "actual_departure"); }
+  function isCompleted(m){ return normStatus(getRawStatus(m)) === "Completed"; }
+
+  const doneRows = all.filter(m => isCompleted(m) || isCancelled(m));
+  const activeCandidates = all.filter(m => !(isCompleted(m) || isCancelled(m)));
+
+  const todayRows = [];
+  const backlogRows = [];
+
+  activeCandidates.forEach(m => {
+    const req = getMissionDateISO(m);
+    if (req && !hasStarted(m) && req < todayISO){
+      backlogRows.push(m);
+    } else {
+      todayRows.push(m);
+    }
+  });
+
+  backlogRows.sort((a,b)=> String(getMissionDateISO(a)||"").localeCompare(String(getMissionDateISO(b)||"")));
+  doneRows.sort((a,b)=>{
+    const da = _depMinutesOfDay(a);
+    const db = _depMinutesOfDay(b);
+    if (da !== db) return da - db;
+    return String(a.id||"").localeCompare(String(b.id||""));
+  });
+
+  function headerRow(title, subText){
+    return `
+      <tr style="background:#f8fafc;">
+        <td colspan="8" style="padding:10px 12px; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;">
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <div style="font-weight:900; color:#111827;">${escapeHtml(title)}</div>
+            <div class="muted" style="font-size:12px;">${escapeHtml(subText || "")}</div>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  function renderMissionRow(m){
     const ft = getFromTo(m);
-    const s  = normStatus(getRawStatus(m));
+    const s = autoComputeStatus(m);
+
 
     return `
       <tr>
@@ -1909,104 +2094,9 @@ if (!isTodayView){
         </td>
       </tr>
     `;
-  }).join("");
-
-  if (cn) cn.textContent = `${rows.length} missions`;
-  return;
-}
-
-
-  // =========================
-// วันนี้: Active + Done (Completed/Cancelled) แบบ collapsible
-// =========================
-const all = Array.isArray(rows) ? rows : [];
-
-function hasStarted(m){ return !!getStepISO(m, "actual_departure"); }
-function isCompleted(m){ return normStatus(getRawStatus(m)) === "Completed"; }
-
-const doneRows = all.filter(m => isCompleted(m) || isCancelled(m));
-const activeCandidates = all.filter(m => !(isCompleted(m) || isCancelled(m)));
-
-const todayRows = [];
-const backlogRows = [];
-
-activeCandidates.forEach(m => {
-  const req = getMissionDateISO(m);
-  if (req && !hasStarted(m) && req < todayISO){
-    backlogRows.push(m);
-  } else {
-    todayRows.push(m);
   }
-});
 
-backlogRows.sort((a,b)=> String(getMissionDateISO(a)||"").localeCompare(String(getMissionDateISO(b)||"")));
-doneRows.sort((a,b)=>{
-  const da = _depMinutesOfDay(a);
-  const db = _depMinutesOfDay(b);
-  if (da !== db) return da - db;
-  return String(a.id||"").localeCompare(String(b.id||""));
-});
-
-function headerRow(title, subText){
-  return `
-    <tr style="background:#f8fafc;">
-      <td colspan="8" style="padding:10px 12px; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;">
-        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-          <div style="font-weight:900; color:#111827;">${escapeHtml(title)}</div>
-          <div class="muted" style="font-size:12px;">${escapeHtml(subText || "")}</div>
-        </div>
-      </td>
-    </tr>
-  `;
-}
-
-function renderMissionRow(m){
-  const ft = getFromTo(m);
-  const s  = normStatus(getRawStatus(m));
-
-  return `
-    <tr>
-      <td><strong>${escapeHtml(m.id || "-")}</strong></td>
-      <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
-      <td>${formatDepartureCell(m)}</td>
-
-      <!-- ✅ Mission Type = 2 lines -->
-      <td class="col-type">
-        <div class="clamp2">${escapeHtml(getTypeLabelForTable(m))}</div>
-      </td>
-
-      <!-- ✅ From/To = 1 line -->
-      <td class="col-from">
-        <div class="clamp1">${escapeHtml(ft.from || "-")}</div>
-      </td>
-      <td class="col-to">
-        <div class="clamp1">${escapeHtml(ft.to || "-")}</div>
-      </td>
-
-      <td>
-        <div class="statusCell">
-          <span class="badge ${badgeClassFromStatus(s)}">${escapeHtml(s)}</span>
-          ${getStatusIconsHTML(s)}
-        </div>
-      </td>
-
-      <td>
-        <div class="actionCell">
-          <button class="btn light tiny" type="button" onclick="openDetails('${escapeHtml(m.id)}')">Details</button>
-          ${
-            (() => {
-              const st = getTableOnDutyBtnState(m);
-              return `<button class="btn pill tiny ${st.cls}" type="button" onclick="openStamp('${escapeHtml(m.id)}')">${escapeHtml(st.text)}</button>`;
-            })()
-          }
-        </div>
-      </td>
-    </tr>
-  `;
-}
-
-let html = "";
-
+  let html = "";
 
   // A) Today missions
   html += headerRow("Today missions", `${todayRows.length} mission(s)`);
@@ -2031,17 +2121,15 @@ let html = "";
   if (cn) cn.textContent = `${totalShown} missions (Active ${todayRows.length} + Done ${doneRows.length})`;
 }
 
-
 /* =========================================================
    MAIN RENDER
 ========================================================= */
 function render(){
-  allMissions = readMissions();
 
-  if (autoUpdatePreparingDelayed(allMissions)){
-    writeMissions(allMissions);
-    allMissions = readMissions();
-  }
+  // ✅ ใช้ Firestore เป็นหลัก + กรอง deleted ออกตั้งแต่ต้นทาง
+  allMissions = Array.isArray(window.FIRESTORE_MISSIONS)
+    ? window.FIRESTORE_MISSIONS.filter(m => !isDeletedMission(m))
+    : [];
 
   const selectedDate = getSelectedDateISO();
   const todayISO = getTodayISO();
@@ -2062,35 +2150,50 @@ function render(){
   rows = rows.filter(m => matchSearch(m, q));
   rows = rows.filter(m => matchStatus(m, st));
 
-  // ✅ ใช้ sort helpers global (ไม่ประกาศซ้ำใน render)
   rows.sort((a,b)=> {
-    const ta = _tierRank(a.status);
-    const tb = _tierRank(b.status);
-    if (ta !== tb) return ta - tb;
+  const sa = normStatus(getRawStatus(a));
+  const sb = normStatus(getRawStatus(b));
 
-    if (ta === 0){
-      const ba = _activeBlockRank(a.status);
-      const bb = _activeBlockRank(b.status);
-      if (ba !== bb) return ba - bb;
+  const ta = _tierRank(sa);
+  const tb = _tierRank(sb);
+  if (ta !== tb) return ta - tb;
 
-      const ma = _depMinutesOfDay(a);
-      const mb = _depMinutesOfDay(b);
-      if (ma !== mb) return ma - mb;
-
-      return String(a.id||"").localeCompare(String(b.id||""));
-    }
+  if (ta === 0){
+    const ba = _activeBlockRank(sa);
+    const bb = _activeBlockRank(sb);
+    if (ba !== bb) return ba - bb;
 
     const ma = _depMinutesOfDay(a);
     const mb = _depMinutesOfDay(b);
     if (ma !== mb) return ma - mb;
+
     return String(a.id||"").localeCompare(String(b.id||""));
-  });
+  }
+
+  const ma = _depMinutesOfDay(a);
+  const mb = _depMinutesOfDay(b);
+  if (ma !== mb) return ma - mb;
+  return String(a.id||"").localeCompare(String(b.id||""));
+});
 
   renderTable(rows, selectedDate);
 }
 
-function safeRender(){
-  try{ render(); }catch(e){ console.error(e); }
+// =====================================================
+// ✅ SAFE RENDER BRIDGE
+// ใช้ร่วมกับ Firestore listener ทุกหน้า
+// บางไฟล์เรียก safeRender(), บางไฟล์มีแค่ render()
+// =====================================================
+if (typeof window.safeRender !== "function"){
+  window.safeRender = function(){
+    try{
+      if (typeof render === "function"){
+        render();
+      }
+    }catch(e){
+      console.warn("safeRender failed:", e);
+    }
+  };
 }
 
 /* =========================================================
@@ -2169,13 +2272,42 @@ function getMissionById(id){
   const missions = readMissions();
   return missions.find(x => String(x.id) === String(id)) || null;
 }
+
 function upsertMission(m){
-  const missions = readMissions();
-  const idx = missions.findIndex(x => String(x.id) === String(m.id));
-  if (idx >= 0) missions[idx] = m;
-  else missions.push(m);
-  writeMissions(missions);
+  if (!m?.id) return;
+
+  const id = String(m.id);
+
+  // ✅ 1) Optimistic update: อัปเดตในหน้านี้ทันที (ไม่รอ listener)
+  try{
+    const arr = Array.isArray(window.FIRESTORE_MISSIONS) ? window.FIRESTORE_MISSIONS : [];
+    const idx = arr.findIndex(x => String(x?.id) === id);
+    const next = (idx >= 0)
+      ? [...arr.slice(0, idx), m, ...arr.slice(idx + 1)]
+      : [m, ...arr];
+
+    window.DATA_SOURCE = "firestore";
+    window.FIRESTORE_MISSIONS = next;
+
+    // ping ให้ข้ามแท็บ/อีกหน้า render ได้
+    emitSync("MISSIONS_UPDATED", { id, at: Date.now() });
+  }catch(e){
+    console.warn("optimistic update failed:", e);
+  }
+
+  // ✅ 2) Firestore: ให้ “เขียนจริง” เสมอ (เพื่อให้ index เห็น)
+  try{
+    if (window.DB?.saveMission){
+      window.DB.saveMission(id, m).catch(err => console.warn("FS save failed:", err));
+    }
+  }catch(e){
+    console.warn("DB bridge not ready:", e);
+  }
+
+  // ❌ ไม่ต้อง writeMissions ลง SCC_MISSIONS_V1 ในโหมด Firestore
 }
+
+
 
 function syncDetailsFooterButton(){
   const btn = document.getElementById("openStampBtn");
@@ -2344,7 +2476,6 @@ cancelOverlay?.addEventListener("click", (e) => {
   if (e.target === cancelOverlay) closeCancelDialog();
 });
 
-
 /* =========================================================
    FIX: Hard reset button bindings (On Duty / Cancel)
    - กันเคส event ซ้อน/ผูกผิด/onclick เก่า
@@ -2372,11 +2503,8 @@ function hardResetDetailButtons(){
   });
 }
 
-
 /* =========================================================
    STAMP PANEL MODULE — OPERATION
-   (ของคุณเดิมทั้งหมด — คงไว้)
-   ✅ Cleaned: no duplicated helpers below, no render() direct call, safeRender only
 ========================================================= */
 
 if (typeof window.stampMissionId === "undefined") window.stampMissionId = null;
@@ -2748,22 +2876,32 @@ function wireStampUI(){
   });
 }
 
-
-/* =========================================================
-   CONTROLS + SAFE RENDER
-========================================================= */
 function wireControls(){
   document.getElementById("search")?.addEventListener("input", safeRender);
   document.getElementById("statusFilter")?.addEventListener("change", safeRender);
-  document.getElementById("dateFilter")?.addEventListener("change", safeRender);
+
+  // ✅ เปลี่ยนจาก change→safeRender อย่างเดียว เป็น "สลับ listener ตามปี" แล้วค่อย render
+  document.getElementById("dateFilter")?.addEventListener("change", () => {
+    try{
+      const sel = getSelectedDateISO();     // YYYY-MM-DD
+      const year = String(sel).slice(0,4);
+
+      if (window.DB?.listenMissionsByYear && window.__FS_YEAR__ !== year){
+        window.__FS_YEAR__ = year;
+        window.DB.listenMissionsByYear(year); // ✅ เปลี่ยน listener ให้ตรงปี
+      }
+    }catch(e){
+      console.warn("switch year listener failed:", e);
+    }
+    safeRender();
+  });
+
   document.getElementById("refreshBtn")?.addEventListener("click", safeRender);
 }
 
+
 /* =========================================================
    BOOT (ONE ONLY ✅)
-   - clock
-   - default dateFilter = today (ถ้า user ยังไม่เลือก)
-   - render now + cross-tab sync
 ========================================================= */
 let __BOOTED__ = false;
 
@@ -2801,6 +2939,21 @@ function __kickRender(){
   setTimeout(safeRender, 30);
   setTimeout(safeRender, 200);
   requestAnimationFrame(safeRender);
+
+  // ✅ Firestore: bulk sync (ทำเฉพาะตอน "ยังไม่ได้เปิด Live listener")
+  try{
+    if (!window.__FS_LIVE__ && window.__syncAllMissionsToFirestore && !window.__FS_BULK_SYNC_DONE__){
+      window.__FS_BULK_SYNC_DONE__ = true;
+      const arr = readMissions();
+      if (arr.length){
+        window.__syncAllMissionsToFirestore(arr).catch(err=>{
+          console.warn("Bulk sync failed:", err);
+        });
+      }
+    }
+  }catch(err){
+    console.warn("Bulk sync bridge not ready:", err);
+  }
 }
 
 function __bootOperationPage(){
@@ -2813,7 +2966,6 @@ function __bootOperationPage(){
 
   // ✅ ตอนเปิดหน้า
   __kickRender();
-
 
   // ✅ ตอนหน้าโหลดเสร็จจริง
   window.addEventListener("load", __kickRender);
@@ -2867,20 +3019,29 @@ function __bootOperationPage(){
 </script>
 
 <script type="module">
-  // 🔹 Firebase core
-  import { initializeApp } from
-    "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+  import { initializeApp, getApps, getApp }
+    from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 
-  // 🔹 Firestore (ที่คุณต้องใช้จริง)
   import {
     getFirestore,
-    collection, doc, setDoc, updateDoc, addDoc,
-    query, where, orderBy, onSnapshot,
-    serverTimestamp, Timestamp
-  } from
-    "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+    collection,
+    doc,
+    setDoc,
+    getDoc,
+    updateDoc,
+    query,
+    where,
+    orderBy,
+    onSnapshot,
+    getDocs,
+    getCountFromServer,
+    serverTimestamp,
+    Timestamp,
+  } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
-  // 🔹 Firebase config (ใช้ของคุณได้ตรง ๆ)
+  // =========================
+  // Firebase init (NO DUP)
+  // =========================
   const firebaseConfig = {
     apiKey: "AIzaSyC2CZWT1jDRIs2th7x8pXI9m3Gkw8bNqVg",
     authDomain: "pilot-scc.firebaseapp.com",
@@ -2888,15 +3049,289 @@ function __bootOperationPage(){
     storageBucket: "pilot-scc.firebasestorage.app",
     messagingSenderId: "656652367033",
     appId: "1:656652367033:web:25a53cd3c979fea69ad768"
-    // ❌ measurementId ไม่ต้องใช้
   };
 
-  // 🔹 Initialize
-  const app = initializeApp(firebaseConfig);
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   const db  = getFirestore(app);
 
-  console.log("🔥 Firebase + Firestore ready");
+  // =========================
+  // Helpers
+  // =========================
+  const normalizeId = (x) => String(x ?? "").trim();
+
+  function tsToMs(t){
+    try{
+      if (!t) return 0;
+      if (typeof t.toMillis === "function") return t.toMillis();
+      if (typeof t.seconds === "number") return t.seconds * 1000;
+      if (typeof t === "string" || t instanceof String){
+        const d = new Date(String(t));
+        return isNaN(d.getTime()) ? 0 : d.getTime();
+      }
+      return 0;
+    }catch{ return 0; }
+  }
+
+  function bestUpdatedMs(m){
+    const d = m?.details || {};
+    const op = d?.OperationStamp || {};
+    return Math.max(
+      tsToMs(m?.updatedAt),
+      tsToMs(m?.createdAt),
+      tsToMs(op?.lastUpdatedAt),
+      0
+    );
+  }
+
+  function dedupeByIdKeepLatest(arr){
+    const map = new Map();
+    for (const item of (arr || [])){
+      const m = item || {};
+      const id = normalizeId(m.id || m.missionId);
+      if (!id) continue;
+
+      m.id = id;
+      m.missionId = id;
+
+      const cur = map.get(id);
+      if (!cur){
+        map.set(id, m);
+        continue;
+      }
+
+      const a = bestUpdatedMs(m);
+      const b = bestUpdatedMs(cur);
+      if (a >= b) map.set(id, m);
+    }
+    return [...map.values()];
+  }
+
+  // ✅ Firestore ห้าม undefined: “ลบ key ที่ undefined ทิ้ง”
+  function cleanForFirestore(input){
+    if (input === undefined) return undefined;
+    if (input === null) return null;
+
+    const t = typeof input;
+    if (t === "string" || t === "number" || t === "boolean") return input;
+
+    if (input instanceof Date) return input.toISOString();
+
+    if (Array.isArray(input)){
+      return input.map(v => (v === undefined ? null : cleanForFirestore(v)));
+    }
+
+    if (t === "object"){
+      const ctor = input?.constructor?.name || "";
+      if (ctor && ctor !== "Object") return input;
+
+      const out = {};
+      for (const [k, v] of Object.entries(input)){
+        const vv = cleanForFirestore(v);
+        if (vv !== undefined) out[k] = vv;
+      }
+      return out;
+    }
+
+    return input;
+  }
+
+  function normalizeMission(m){
+    if (!m) return m;
+    m.details = m.details || {};
+
+    const id = normalizeId(m.id || m.missionId);
+    if (id){
+      m.id = id;
+      m.missionId = id;
+    }
+
+    // sync status
+    if (m.details?.status && !m.status) m.status = m.details.status;
+    if (m.status && (!m.details?.status)) m.details.status = m.status;
+
+    return m;
+  }
+
+  function safeRenderNow(){
+    try{
+      if (typeof window.safeRender === "function") window.safeRender();
+      else if (typeof window.render === "function") window.render();
+    }catch(e){
+      console.warn("render failed:", e);
+    }
+  }
+
+  function syncPing(){
+    try{
+      localStorage.setItem("__SCC_SYNC_PING__", JSON.stringify({
+        eventName: "MISSIONS_UPDATED",
+        at: Date.now()
+      }));
+    }catch{}
+  }
+
+  // =========================
+  // window.DB bridge (DON'T OVERWRITE)
+  // =========================
+  window.DB = window.DB || {};
+
+  function pickMissionDateISO(m){
+    const candidates = [
+      m?.missionDateISO, m?.dateISO, m?.date, m?.missionDate,
+      m?.details?.missionDateISO, m?.details?.dateISO, m?.details?.date, m?.details?.missionDate
+    ];
+    for (const v of candidates){
+      const s = String(v ?? "").trim();
+      if (s && /^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+    }
+    return "";
+  }
+
+  // ✅ SAVE (merge) + set createdAt only first time + always maintain missionDateISO
+  window.DB.saveMission = async (id, missionObj) => {
+    const _id = normalizeId(id);
+    if (!_id) throw new Error("saveMission: missing id");
+
+    const ref = doc(db, "missions", _id);
+    const snap = await getDoc(ref);
+    const isNew = !snap.exists();
+
+    const mdISO = pickMissionDateISO(missionObj) || "";
+
+    const payload = cleanForFirestore({
+      ...(missionObj || {}),
+      id: _id,
+      missionId: _id,
+
+      ...(mdISO ? { missionDateISO: mdISO } : {}),
+
+      _source: "operation",
+      ...(isNew ? { createdAt: serverTimestamp() } : {}),
+      updatedAt: serverTimestamp(),
+    });
+
+    await setDoc(ref, payload, { merge: true });
+    return true;
+  };
+
+  // ✅ UPDATE (patch) + always maintain missionDateISO if patch has any date
+  window.DB.updateMission = async (id, patch) => {
+    const _id = normalizeId(id);
+    if (!_id) throw new Error("updateMission: missing id");
+
+    const ref = doc(db, "missions", _id);
+    const mdISO = pickMissionDateISO(patch) || "";
+
+    const payload = cleanForFirestore({
+      ...(patch || {}),
+      id: _id,
+      missionId: _id,
+      ...(mdISO ? { missionDateISO: mdISO } : {}),
+      _source: "operation",
+      updatedAt: serverTimestamp(),
+    });
+
+    await updateDoc(ref, payload);
+    return true;
+  };
+
+  // ✅ server count (optional ใช้เทียบ/ดีบัก)
+  window.DB.countYearAndDay = async (selectedDateISO) => {
+    const sel = String(selectedDateISO || "").slice(0,10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(sel)) return { yearTotal: 0, dayTotal: 0 };
+
+    const year = sel.slice(0,4);
+    const startYear = `${year}-01-01`;
+    const nextYear  = `${Number(year) + 1}-01-01`;
+
+    const qYear = query(
+      collection(db, "missions"),
+      where("missionDateISO", ">=", startYear),
+      where("missionDateISO", "<",  nextYear)
+    );
+    const yearSnap = await getCountFromServer(qYear);
+
+    const qDay = query(
+      collection(db, "missions"),
+      where("missionDateISO", "==", sel)
+    );
+    const daySnap = await getCountFromServer(qDay);
+
+    return {
+      yearTotal: yearSnap.data().count || 0,
+      dayTotal:  daySnap.data().count  || 0
+    };
+  };
+
+  // =========================
+  // ✅ Live listener: BY YEAR (ถาวร)
+  // =========================
+  window.DB.listenMissionsByYear = (year, onArr) => {
+    const y = String(year || "").slice(0,4);
+    if (!/^\d{4}$/.test(y)) throw new Error("listenMissionsByYear: invalid year");
+
+    // stop old listener (ถ้ามี)
+    try{ window.__FS_UNSUB__ && window.__FS_UNSUB__(); }catch{}
+    window.__FS_UNSUB__ = null;
+
+    const start = `${y}-01-01`;
+    const next  = `${Number(y) + 1}-01-01`;
+
+    const qy = query(
+      collection(db, "missions"),
+      where("missionDateISO", ">=", start),
+      where("missionDateISO", "<",  next),
+      orderBy("missionDateISO", "asc")
+    );
+
+    const unsub = onSnapshot(qy, (snap) => {
+      const raw = [];
+      snap.forEach(d => {
+        const m = normalizeMission({ ...d.data() });
+        if (m?.id) raw.push(m);
+      });
+
+      const arr = dedupeByIdKeepLatest(raw);
+
+      window.DATA_SOURCE = "firestore";
+      window.FIRESTORE_MISSIONS = arr;
+
+      syncPing();
+      safeRenderNow();
+
+      try{ onArr && onArr(arr); }catch{}
+    }, (err) => {
+      console.warn("Firestore listen error:", err);
+    });
+
+    window.__FS_UNSUB__ = unsub;
+
+    // helper stop
+    window.DB.stopListenMissions = () => {
+      try{ window.__FS_UNSUB__ && window.__FS_UNSUB__(); }catch{}
+      window.__FS_UNSUB__ = null;
+    };
+
+    return unsub;
+  };
+
+  console.log("🔥 Firestore ready + window.DB bridge ready (YEAR listener)");
+
+  // ✅ Auto start: subscribe ปีของ dateFilter ถ้ามี ไม่งั้นใช้ปีปัจจุบัน
+  try{
+    const df = document.getElementById("dateFilter");
+    const sel = (df && df.value) ? String(df.value).slice(0,10) : "";
+    const year = (sel && /^\d{4}-\d{2}-\d{2}$/.test(sel))
+      ? sel.slice(0,4)
+      : String(new Date().getFullYear());
+
+    window.__FS_YEAR__ = year;
+    window.DB.listenMissionsByYear(year);
+  }catch(e){
+    console.warn("Auto listen by year failed:", e);
+  }
 </script>
+
 
 </body>
 </html>
