@@ -2471,6 +2471,10 @@ function getRawStatusLocal(m){
   const s3 = (m && m.statusCurrent != null) ? String(m.statusCurrent).trim() : "";
   return s1 || s2 || s3;
 }
+function hasStartedStamp(m){
+  const op = (m?.details || {}).OperationStamp;
+  return !!(op && Array.isArray(op.steps) && op.steps.length > 0);
+}
 
 function isDoneStatus(st){
   st = normStatus(st);
@@ -2547,6 +2551,8 @@ function safeRender(){
     console.error("render() crashed:", err);
   }
 }
+window.safeRender = safeRender;
+
 
 /* =======================
    RENDER TABLE  ✅ SINGLE SOURCE OF TRUTH
@@ -2569,7 +2575,7 @@ const changedByAuto = false;
     // ไม่ต้อง read ซ้ำ เพราะ missions คือ state ล่าสุดอยู่แล้ว
   }
 
-  // -----------------------
+// -----------------------
 // ✅ TOP STATS (อิง selectedDay)
 // -----------------------
 const selectedDay = getSelectedDayISO();
@@ -2578,80 +2584,71 @@ const selectedYear = String(selectedDay || "").slice(0,4);
 // ✅ source-of-truth + exclude deleted
 const all = missions.filter(m => !isDeletedMission(m));
 
-/* ======================
-   🔎 DEBUG DATE FILTER
-   (temporary — remove later)
-====================== */
-console.log("[DBG] selectedDay =", selectedDay);
+// ✅ Today's Missions table set (includes carryover not-done missions)
+const todayMissions = all.filter(m => {
+  const raw = normStatus(getRawStatusLocal(m));
+  if (raw === "Aborted") return false;
 
-console.log(
-  "[DBG] missions date check =",
-  all.map(m => ({
-    id: m.id,
-    status: m.status,
+  const eff = getEffectiveStatusForUI(m);
+  const missionDay = getMissionDateISO(m);
+  if (!missionDay) return false;
 
-    // fields ที่อาจใช้เป็นวัน
-    missionDateISO: m.missionDateISO,
-    date: m.date,
-    createdAtISO: m.createdAtISO,
-    detailsCreatedAtISO: m.details?.createdAtISO,
+  // ✅ Done statuses: show on the day they became done (done-day logic)
+  if (isDoneStatus(eff)){
+    const changedDay = getStatusChangedDayISO(m) || missionDay;
+    return changedDay === selectedDay;
+  }
 
-    // วันที่ที่ระบบคำนวณจริง
-    computedDay: getMissionDateISO(m)
-  }))
-);
-/* ====================== */
+  // ✅ Show missions of selected day
+  if (missionDay === selectedDay) return true;
 
-  // ✅ Today table logic (match operation.html)
-  const todayMissions = all.filter(m => {
-    const st = normStatus(getRawStatusLocal(m));
-    if (st === "Aborted") return false;
+  // ✅ Carryover: mission from earlier days but still NOT done
+  if (missionDay < selectedDay) return true;
 
-    const missionDay = getMissionDateISO(m);
-    if (!missionDay) return false;
+  return false;
+});
 
-    if (isDoneStatus(st)){
-      const changedDay = getStatusChangedDayISO(m) || missionDay;
-      return changedDay === selectedDay;
-    }
-    return missionDay === selectedDay;
-  });
+// ✅ Year rows (อิง mission day)
+const yearRows = all.filter(m => {
+  const day = getMissionDateISO(m);
+  return day && String(day).slice(0,4) === selectedYear;
+});
 
-  // ✅ Year rows (อิง mission day)
-  const yearRows = all.filter(m => {
-    const day = getMissionDateISO(m);
-    return day && String(day).slice(0,4) === selectedYear;
-  });
+// ✅ Stats from todayMissions (match your definitions)
+const totalToday = todayMissions.length;
 
-  // ✅ Stats from todayMissions
-  const activeSet = new Set(["Preparing","Delayed","Transporting","Returning"]);
-const activeToday = todayMissions.filter(m => activeSet.has(getEffectiveStatusForUI(m))).length;
-
-const remaining = todayMissions.filter(m => {
-  const s = getEffectiveStatusForUI(m);
-  return (s === "Scheduled" || s === "Pending");
+// Active = started stamp at least 1 step (from today's table set), not done
+const activeToday = todayMissions.filter(m => {
+  const eff = getEffectiveStatusForUI(m);
+  if (eff === "Completed" || eff === "Cancelled" || eff === "Aborted") return false;
+  return hasStartedStamp(m);
 }).length;
 
+// Remaining Scheduled = Scheduled + Delayed in Today's table (carryover included)
+const remaining = todayMissions.filter(m => {
+  const eff = getEffectiveStatusForUI(m);
+  return (eff === "Scheduled" || eff === "Delayed");
+}).length;
+
+// Completed/Cancelled = same done-day logic (todayMissions already respects it)
 const completedToday = todayMissions.filter(m => getEffectiveStatusForUI(m) === "Completed").length;
 const cancelledToday = todayMissions.filter(m => getEffectiveStatusForUI(m) === "Cancelled").length;
 
+// set UI
+const elTotal = document.getElementById("total");
+const elTodayTotal = document.getElementById("todayTotal");
+const elActiveToday = document.getElementById("activeToday");
+const elRemainScheduled = document.getElementById("remainingScheduled");
+const elCompletedToday = document.getElementById("completedN");
+const elCancelledToday = document.getElementById("cancelledN");
 
-  const totalToday = todayMissions.length;
+if (elTotal) elTotal.innerText = yearRows.length;
+if (elTodayTotal) elTodayTotal.innerText = totalToday;
+if (elActiveToday) elActiveToday.innerText = activeToday;
+if (elRemainScheduled) elRemainScheduled.innerText = remaining;
+if (elCompletedToday) elCompletedToday.innerText = completedToday;
+if (elCancelledToday) elCancelledToday.innerText = cancelledToday;
 
-  // set UI
-  const elTotal = document.getElementById("total");
-  const elTodayTotal = document.getElementById("todayTotal");
-  const elActiveToday = document.getElementById("activeToday");
-  const elRemainScheduled = document.getElementById("remainingScheduled");
-  const elCompletedToday = document.getElementById("completedN");
-  const elCancelledToday = document.getElementById("cancelledN");
-
-  if (elTotal) elTotal.innerText = yearRows.length;
-  if (elTodayTotal) elTodayTotal.innerText = totalToday;
-  if (elActiveToday) elActiveToday.innerText = activeToday;
-  if (elRemainScheduled) elRemainScheduled.innerText = remaining;
-  if (elCompletedToday) elCompletedToday.innerText = completedToday;
-  if (elCancelledToday) elCancelledToday.innerText = cancelledToday;
 
   // -----------------------
   // FILTERS + TABLE TITLE
@@ -3186,7 +3183,7 @@ function openStamp(id){
   const dep = (m.details||{}).departureFromHospital || (m.details||{}).departureOriginal || "";
   document.getElementById("stampSub").textContent = [
     `Mission ${m.id}`,
-    `${String(m.date||"").slice(0,10)} ${dep || ""}`.trim(),
+    `${getMissionDateISO(m) || "-"} ${dep || ""}`.trim(),
     getTypeLabelForTable(m),
     `${ft.from} → ${ft.to}`
   ].filter(Boolean).join(" • ");
@@ -3493,6 +3490,11 @@ document.addEventListener("keydown", (e) => {
   document.getElementById("dateFilter")
     ?.addEventListener("change", safeRender);
 
+// ✅ When coming back from bfcache (iOS/LINE often), force re-render
+window.addEventListener("pageshow", () => safeRender());
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) safeRender();
+});
 
   /* ---------- FIRST RENDER ---------- */
 // Firestore mode: wait for subscribe callback
@@ -3510,20 +3512,20 @@ window.DB = window.DB || {};
 window.DB.saveMission = (id, missionObj) => setMissionPatch(id, missionObj);
 window.DB.setMissionPatch = setMissionPatch;
 
-let _lastSig = "";
-
 subscribeMissions48h((arr) => {
   const list = Array.isArray(arr) ? arr : [];
-  const sig = String(list.length) + "|" + String(list[0]?.id || "") + "|" + String(list[list.length-1]?.id || "");
-  if (sig === _lastSig) return; // กัน callback ซ้ำแบบเนียน ๆ
-  _lastSig = sig;
-
-  console.log("[FS] subscribeMissions48h rows =", list.length, list[0]);
+  console.log("[FS] subscribeMissions48h rows =", list.length);
 
   window.DATA_SOURCE = "firestore";
   window.FIRESTORE_MISSIONS = list;
-  safeRender();
+
+  // ✅ re-render always (safe + accurate)
+  window.safeRender?.();
+  if (typeof window.safeRender === "function") window.safeRender();
+else console.warn("safeRender not ready yet");
+
 });
+
 </script>
 
 

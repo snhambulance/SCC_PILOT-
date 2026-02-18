@@ -1,4 +1,12 @@
-
+<!-- =========================
+OPERATION.HTML (copy + paste) ✅ FINAL — FIXED (no boot-dup / no stray code)
+✅ Guaranteed:
+- Single boot (no duplicated boot blocks)
+- No undefined variables (removed `m` stray line)
+- No `forceRun` / no dangling IIFE
+- Stats + Table always render (safeRender + pageshow)
+- Stamp works (modal On Duty + table Stamp)
+========================= -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -1514,11 +1522,16 @@ function getAutoStatusForDisplay(m){
 /* =========================================================
    DEPARTURE CELL (strike original + show current)
 ========================================================= */
-function formatDepartureCell(m){
+function formatDepartureCell(m, selectedDay){
   const d = m.details || {};
   const cur = d.departureFromHospital || "";
   const orig = d.departureOriginal || "";
   const changed = orig && cur && (orig !== cur);
+
+  // ✅ +1 tag (เฉพาะเคส look-ahead ที่เข้าเงื่อนไขจริง)
+  const plus1 = (selectedDay && (typeof isLookAheadMission === "function") && isLookAheadMission(m, selectedDay))
+    ? `<span style="margin-left:6px; font-size:11px; font-weight:1000; padding:2px 8px; border-radius:999px; background:#111827; color:#fff;">+1</span>`
+    : "";
 
   if (!cur && !orig) return `<span class="muted">-</span>`;
 
@@ -1530,10 +1543,18 @@ function formatDepartureCell(m){
       <span style="font-weight:1000;color:#111827;display:inline-block;">
         ${escapeHtml(cur)}
       </span>
+      ${plus1}
     `;
   }
-  return `<span style="font-weight:1000;color:#111827;display:inline-block;">${escapeHtml(cur || orig)}</span>`;
+
+  return `
+    <span style="font-weight:1000;color:#111827;display:inline-block;">
+      ${escapeHtml(cur || orig)}
+    </span>
+    ${plus1}
+  `;
 }
+
 
 /* =========================================================
    DETAILS RENDER
@@ -1844,12 +1865,7 @@ let allMissions = [];
 let currentMissionId = null;
 if (typeof window.stampMissionId === "undefined") window.stampMissionId = null;
 
-/* =========================================================
-   TOP STATS ✅ Total (Year/Day) = all missions except deleted
-   - include Completed + Cancelled
-   - exclude deleted / soft-deleted
-   - year based on selectedDateISO's year
-========================================================= */
+
 function isDeletedMission(m){
   if (!m) return true;
   const d = m.details || {};
@@ -1858,48 +1874,23 @@ function isDeletedMission(m){
     d.isDeleted || d._deleted || d.deleted || d.deletedAt
   );
 }
-
-function updateTopStatsFromSelectedDate(all, selectedDateISO){
-  const yearEl = document.getElementById("total");
-  const tEl    = document.getElementById("todayTotal");
-  const aEl    = document.getElementById("activeToday");
-  const rEl    = document.getElementById("remainingScheduled");
-  const cEl    = document.getElementById("completedN");
-  const xEl    = document.getElementById("cancelledN");
-
-  const sel  = String(selectedDateISO || getTodayISO()).slice(0,10);
-  const year = sel.slice(0,4);
-
-  // ✅ filter deleted ออกก่อนนับทุกตัวเลข
-  const cleanAll = (Array.isArray(all) ? all : []).filter(m => !isDeletedMission(m));
-
-  const inYear = cleanAll.filter(m => (getMissionDateISO(m) || "").slice(0,4) === year);
-  const inDay  = cleanAll.filter(m => getMissionDateISO(m) === sel);
-
-  const activeSet = new Set(["Preparing","Delayed","Transporting","Returning"]);
-
-  const totalYear = inYear.length;
-  const totalDay  = inDay.length;
-
-  const activeDay = inDay.filter(m => activeSet.has(normStatus(getRawStatus(m)))).length;
-  const remSched  = inDay.filter(m => normStatus(getRawStatus(m)) === "Scheduled").length;
-
-  // ✅ ใช้ normStatus ตรง ๆ ให้ consistent
-  const compDay   = inDay.filter(m => normStatus(getRawStatus(m)) === "Completed").length;
-  const cancDay   = inDay.filter(m => normStatus(getRawStatus(m)) === "Cancelled").length;
-
-  if (yearEl) yearEl.textContent = String(totalYear);
-  if (tEl)    tEl.textContent    = String(totalDay);
-  if (aEl)    aEl.textContent    = String(activeDay);
-  if (rEl)    rEl.textContent    = String(remSched);
-  if (cEl)    cEl.textContent    = String(compDay);
-  if (xEl)    xEl.textContent    = String(cancDay);
-
-  const title = document.getElementById("tableTitle");
-  if (title){
-    const isToday = sel === getTodayISO();
-    title.textContent = isToday ? "Today’s Missions" : `Missions — ${sel}`;
+function getEffectiveStatusForUI(m){
+  const raw = normStatusX(getRawStatusLocal(m));
+  // auto เฉพาะ 3 สถานะนี้ เพื่อใช้กับ Remaining / badge / stats ให้ consistent
+  if (raw === "Scheduled" || raw === "Preparing" || raw === "Delayed"){
+    return normStatusX(getAutoStatusForDisplay(m));
   }
+  return raw;
+}
+
+function hasAnyStampStep(m){
+  const steps = m?.details?.OperationStamp?.steps;
+  return Array.isArray(steps) && steps.length > 0;
+}
+
+function isDoneEffStatus(eff){
+  const s = normStatusX(eff);
+  return s === "Completed" || s === "Cancelled" || s === "Aborted";
 }
 
 
@@ -1957,7 +1948,7 @@ function renderTable(rows, selectedDate){
         <tr>
           <td><strong>${escapeHtml(m.id || "-")}</strong></td>
           <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
-          <td>${formatDepartureCell(m)}</td>
+          <td>${formatDepartureCell(m, selectedDate)}</td>
 
           <!-- ✅ Mission Type = 2 lines -->
           <td class="col-type">
@@ -2051,7 +2042,7 @@ function renderTable(rows, selectedDate){
       <tr>
         <td><strong>${escapeHtml(m.id || "-")}</strong></td>
         <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
-        <td>${formatDepartureCell(m)}</td>
+        <td>${formatDepartureCell(m, selectedDate)}</td>
 
         <!-- ✅ Mission Type = 2 lines -->
         <td class="col-type">
@@ -2114,79 +2105,340 @@ function renderTable(rows, selectedDate){
 }
 
 /* =========================================================
-   MAIN RENDER
+   ✅ TODAY LOGIC (MATCH index.html) — operation.html version
+   - Today table only
+   - Carry-over active
+   - Done (Completed/Cancelled) show ONLY on statusChangedDay (fallback missionDay)
+   - Look-ahead tomorrow <01:00 ONLY after 22:30 ONLY when selectedDay = real today
+========================================================= */
+
+// ---------- helpers (match index behavior) ----------
+function addDaysISO(iso, delta){
+  const d = new Date(String(iso).slice(0,10) + "T00:00:00");
+  d.setDate(d.getDate() + (delta||0));
+  return toISODateLocal(d);
+}
+
+function getSelectedDayISO(){
+  return getSelectedDateISO(); // ✅ reuse your existing date filter
+}
+
+function isDoneMission(m){
+  const s = normStatus(getRawStatus(m));
+  return (s === "Completed" || s === "Cancelled");
+}
+
+function isActiveOpsStatus(s){
+  return ["Preparing","Delayed","Transporting","Returning"].includes(normStatus(s));
+}
+
+function getStatusChangedDayISO(m){
+  const iso =
+    m?.details?.statusChangedAt ||
+    m?.details?.OperationStamp?.lastUpdatedAt ||
+    m?.details?.cancel?.cancelledAtISO ||
+    "";
+  return isoToISODate(iso) || "";
+}
+
+// ✅ effective status for UI (ไม่ mutate)
+// - ใช้ auto เฉพาะ Scheduled/Preparing/Delayed
+// - สถานะอื่นใช้ raw ตรง ๆ
+function getEffectiveStatusForUI(m){
+  const raw = normStatus(getRawStatus(m));
+  if (raw === "Scheduled" || raw === "Preparing" || raw === "Delayed"){
+    return normStatus(getAutoStatusForDisplay(m));
+  }
+  return raw;
+}
+
+// ✅ has stamp at least 1 step (ไม่สนวัน)
+function hasAnyStampStep(m){
+  const steps = m?.details?.OperationStamp?.steps;
+  return Array.isArray(steps) && steps.length > 0;
+}
+
+
+// ✅ Day used for counting totals (prefer actual departure day)
+function getCountDayISO(m){
+  const adISO = getStepISO(m, "actual_departure");
+  if (adISO) return isoToISODate(adISO);
+
+  const md = getMissionDateISO(m);
+  if (md) return md;
+
+  const created = m?.createdAt;
+  const ms = (created && typeof created.toMillis === "function") ? created.toMillis() : 0;
+  if (ms) return toISODateLocal(new Date(ms));
+
+  return "";
+}
+
+function timeKeyHHMM(m){
+  const d = m?.details || {};
+  const dep = d.departureFromHospital || d.departureOriginal || "";
+  if (!dep || !String(dep).includes(":")) return "99:99";
+  const hhmm = String(dep).trim().slice(0,5);
+  return /^\d{2}:\d{2}$/.test(hhmm) ? hhmm : "99:99";
+}
+
+// ✅ carry-over: active + missionDay < selectedDay (and not done/aborted)
+function isCarryOverActive(m, selectedDay){
+  const st = normStatus(getRawStatus(m));
+  if (!isActiveOpsStatus(st) && st !== "Scheduled") return false; // (active-ish only)
+  if (st === "Aborted") return false;
+
+  const missionDay = getMissionDateISO(m);
+  if (!missionDay) return false;
+
+  // carry-over = before selectedDay and still not done
+  return (missionDay < selectedDay) && !isDoneMission(m);
+}
+
+// ✅ look-ahead rule: tomorrow departure <01:00, after 22:30, and selectedDay is real today
+function isLookAheadMission(m, selectedDay){
+  const todayISO = getTodayISO();
+  if (selectedDay !== todayISO) return false;
+
+  const now = new Date();
+  const hh = now.getHours(), mm = now.getMinutes();
+  const after2230 = (hh > 22) || (hh === 22 && mm >= 30);
+  if (!after2230) return false;
+
+  const missionDay = getMissionDateISO(m);
+  if (!missionDay) return false;
+
+  const tomorrow = addDaysISO(todayISO, 1);
+  if (missionDay !== tomorrow) return false;
+
+  const dep = timeKeyHHMM(m);
+  if (dep === "99:99") return false;
+
+  // only < 01:00
+  const [h, mi] = dep.split(":").map(Number);
+  const mins = (h*60 + mi);
+  return mins < 60;
+}
+
+function statusRankToday(s){
+  // same feel as index: Active first then scheduled then done
+  const x = normStatus(s);
+  if (x === "Delayed") return 0;
+  if (x === "Preparing") return 1;
+  if (x === "Transporting") return 2;
+  if (x === "Returning") return 3;
+  if (x === "Scheduled") return 4;
+  if (x === "Completed") return 5;
+  if (x === "Cancelled") return 6;
+  return 9;
+}
+
+function applyCommonFilters(rows){
+  const q  = String((document.getElementById("search") || {}).value || "").trim();
+  const st = String((document.getElementById("statusFilter") || {}).value || "ALL");
+  let out = Array.isArray(rows) ? rows : [];
+  out = out.filter(m => matchSearch(m, q));
+  out = out.filter(m => matchStatus(m, st));
+  return out;
+}
+
+/* =========================================================
+   ✅ MAIN RENDER (MATCH index today rules)
 ========================================================= */
 function render(){
 
-  // ✅ ใช้ Firestore เป็นหลัก + กรอง deleted ออกตั้งแต่ต้นทาง
+  // ✅ source-of-truth Firestore + exclude deleted
   allMissions = Array.isArray(window.FIRESTORE_MISSIONS)
     ? window.FIRESTORE_MISSIONS.filter(m => !isDeletedMission(m))
     : [];
 
-  const selectedDate = getSelectedDateISO();
-  const todayISO = getTodayISO();
+  const selectedDay = getSelectedDayISO();
 
-  updateTopStatsFromSelectedDate(allMissions, selectedDate);
+  // ==============================
+  // ✅ Today Missions (Operational view) — MATCH index
+  // ==============================
+  const todayMissions = allMissions.filter(m => {
+    if (!m) return false;
 
-  const q  = String((document.getElementById("search") || {}).value || "").trim();
-  const st = String((document.getElementById("statusFilter") || {}).value || "ALL");
+    const stRaw = getRawStatus(m);
+    const st = normStatus(stRaw);
+    if (st === "Aborted") return false;
 
-  let rows;
+    const missionDay = getMissionDateISO(m);
+    if (!missionDay) return false;
 
-  if (selectedDate === todayISO){
-    rows = allMissions.filter(m => getWorkloadDateISO(m, todayISO) === todayISO);
-  } else {
-    rows = allMissions.filter(m => getMissionDateISO(m) === selectedDate);
-  }
-
-  rows = rows.filter(m => matchSearch(m, q));
-  rows = rows.filter(m => matchStatus(m, st));
-
-  rows.sort((a,b)=> {
-  const sa = normStatus(getRawStatus(a));
-  const sb = normStatus(getRawStatus(b));
-
-  const ta = _tierRank(sa);
-  const tb = _tierRank(sb);
-  if (ta !== tb) return ta - tb;
-
-  if (ta === 0){
-    const ba = _activeBlockRank(sa);
-    const bb = _activeBlockRank(sb);
-    if (ba !== bb) return ba - bb;
-
-    const ma = _depMinutesOfDay(a);
-    const mb = _depMinutesOfDay(b);
-    if (ma !== mb) return ma - mb;
-
-    return String(a.id||"").localeCompare(String(b.id||""));
-  }
-
-  const ma = _depMinutesOfDay(a);
-  const mb = _depMinutesOfDay(b);
-  if (ma !== mb) return ma - mb;
-  return String(a.id||"").localeCompare(String(b.id||""));
-});
-
-  renderTable(rows, selectedDate);
-}
-
-// =====================================================
-// ✅ SAFE RENDER BRIDGE
-// ใช้ร่วมกับ Firestore listener ทุกหน้า
-// บางไฟล์เรียก safeRender(), บางไฟล์มีแค่ render()
-// =====================================================
-if (typeof window.safeRender !== "function"){
-  window.safeRender = function(){
-    try{
-      if (typeof render === "function"){
-        render();
-      }
-    }catch(e){
-      console.warn("safeRender failed:", e);
+    // (1) Done statuses: show ONLY on "statusChangedDay" (fallback missionDay)
+    if (st === "Completed" || st === "Cancelled"){
+      const changedDay = getStatusChangedDayISO(m) || missionDay;
+      return changedDay === selectedDay;
     }
-  };
+
+    // (2) Carry-over active from previous days
+    if (isCarryOverActive(m, selectedDay)) return true;
+
+    // (3) Look-ahead tomorrow <01:00, ONLY after 22:30, ONLY when selectedDay = real today
+    if (isLookAheadMission(m, selectedDay)) return true;
+
+    // (4) Normal: mission of the selected day
+    return missionDay === selectedDay;
+  });
+
+    // ==============================
+  // ✅ TOP STATS (NEW DEFINITIONS)
+  // Total (Today)     = จำนวนแถวที่ขึ้นใน Today’s Missions (รวม carryover)
+  // Active            = ใน Today’s Missions ที่มี stamp ≥ 1 step (ไม่สนวัน) และยังไม่ done
+  // Remaining         = ใน Today’s Missions ที่ effectiveStatus เป็น Scheduled หรือ Delayed
+  // Completed/Cancelled = done-day (todayMissions กรองแบบ done-day อยู่แล้ว)
+  // Total (Year)      = คงนับตาม getCountDayISO เดิม
+  // ==============================
+
+  // ✅ helpers (local to render, ไม่ต้องสร้าง global ใหม่)
+  function getEffectiveStatusForUI(m){
+    const raw = normStatus(getRawStatus(m));
+    if (raw === "Scheduled" || raw === "Preparing" || raw === "Delayed"){
+      return normStatus(getAutoStatusForDisplay(m)); // auto เฉพาะ 3 สถานะ
+    }
+    return raw;
+  }
+  function hasAnyStampStep(m){
+    const steps = m?.details?.OperationStamp?.steps;
+    return Array.isArray(steps) && steps.length > 0;
+  }
+
+  const selectedYear = String(selectedDay || "").slice(0,4);
+
+  // Total (Year) — เดิมของคุณ
+  const yearRows = allMissions.filter(m => {
+    const day = getCountDayISO(m);
+    return day && String(day).slice(0,4) === selectedYear;
+  });
+
+  // Total (Today) — ใหม่: เท่ากับจำนวนแถวของ Today’s Missions (รวม carryover)
+  const totalToday = todayMissions.length;
+
+  // Active — ใหม่: มี stamp ≥1 step และไม่ done
+  const activeCount = todayMissions.filter(m => {
+    const eff = getEffectiveStatusForUI(m);
+    if (eff === "Completed" || eff === "Cancelled" || eff === "Aborted") return false;
+    return hasAnyStampStep(m);
+  }).length;
+
+  // Remaining — ใหม่: Scheduled หรือ Delayed (effective)
+  const remainingCount = todayMissions.filter(m => {
+    const eff = getEffectiveStatusForUI(m);
+    return eff === "Scheduled" || eff === "Delayed";
+  }).length;
+
+  // Completed/Cancelled — ใหม่: done-day (todayMissions already respects it)
+  const completedToday = todayMissions.filter(m => getEffectiveStatusForUI(m) === "Completed").length;
+  const cancelledToday = todayMissions.filter(m => getEffectiveStatusForUI(m) === "Cancelled").length;
+
+  // set UI
+  if (total) total.innerText = String(yearRows.length);
+  if (todayTotal) todayTotal.innerText = String(totalToday);
+  if (activeToday) activeToday.innerText = String(activeCount);
+  if (remainingScheduled) remainingScheduled.innerText = String(remainingCount);
+  if (completedN) completedN.innerText = String(completedToday);
+  if (cancelledN) cancelledN.innerText = String(cancelledToday);
+
+  // Title (คงของคุณ หรือจะเปลี่ยนข้อความก็ได้)
+  if (tableTitle){
+    const titleDate = new Date(selectedDay + "T00:00:00");
+    tableTitle.innerText =
+      `Today Missions: ${titleDate.toLocaleDateString("th-TH", { year:"numeric", month:"short", day:"numeric" })}`;
+  }
+
+  // ==============================
+  // ✅ Today sorting + render (table only)
+  // ==============================
+  let todayRows = applyCommonFilters(todayMissions);
+
+  todayRows.sort((a,b)=>{
+    const sa = normStatus(getAutoStatusForDisplay(a));
+    const sb = normStatus(getAutoStatusForDisplay(b));
+
+    const ra = statusRankToday(sa);
+    const rb = statusRankToday(sb);
+    if (ra !== rb) return ra - rb;
+
+    const ta = timeKeyHHMM(a);
+    const tb = timeKeyHHMM(b);
+    if (ta !== tb) return ta.localeCompare(tb);
+
+    return String(a.id ?? "").localeCompare(String(b.id ?? ""));
+  });
+
+  // render
+  if (!todayRows.length){
+    if (missionBody) missionBody.innerHTML = `<tr><td colspan="8" class="muted">No missions found.</td></tr>`;
+    if (countNote) countNote.innerText = "";
+    return;
+  }
+
+  if (missionBody){
+    missionBody.innerHTML = todayRows.map(m => {
+      const typeShort = getTypeLabelForTable(m);
+      const ft = getFromTo(m);
+
+      // ✅ status display = autoCompute ONLY for Scheduled/Preparing/Delayed (non-mutating)
+      const s = normStatus(getAutoStatusForDisplay(m));
+
+      return `
+        <tr>
+          <td><strong>${escapeHtml(m.id ?? "-")}</strong></td>
+          <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
+          <td>${formatDepartureCell(m, selectedDay)}</td>
+
+          <td class="col-type">
+            <div class="clamp2" title="${escapeHtml(typeShort)}">
+              ${escapeHtml(typeShort)}
+            </div>
+          </td>
+
+          <td class="col-from">
+            <div class="clamp1" title="${escapeHtml(ft.from || "-")}">
+              ${escapeHtml(ft.from || "-")}
+            </div>
+          </td>
+
+          <td class="col-to">
+            <div class="clamp1" title="${escapeHtml(ft.to || "-")}">
+              ${escapeHtml(ft.to || "-")}
+            </div>
+          </td>
+
+          <td>
+            <div class="statusCell">
+              <!-- ✅ IMPORTANT: badge color must follow DISPLAY status -->
+              <span class="badge ${badgeClassFromStatus(s)}">${escapeHtml(s)}</span>
+              ${getStatusIconsHTML(s)}
+            </div>
+          </td>
+
+          <td>
+            <div class="actionCell">
+              <button class="btn light tiny" type="button" onclick="openDetails('${escapeHtml(m.id)}')">Details</button>
+              ${
+                (() => {
+                  const st = getTableOnDutyBtnState(m);
+                  return `<button class="btn pill tiny ${st.cls}" type="button" onclick="openStamp('${escapeHtml(m.id)}')">${escapeHtml(st.text)}</button>`;
+                })()
+              }
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  if (countNote) countNote.innerText = `Showing ${todayRows.length} mission(s)`;
 }
+
+// ✅ safeRender (keep)
+function safeRender(){
+  try{ return render(); }catch(e){ console.error(e); }
+}
+window.safeRender = safeRender;
 
 /* =========================================================
    DETAILS MODAL
@@ -2219,6 +2471,19 @@ const clearBtn     = document.getElementById("clearBtn");
 const exportMonthBtn = document.getElementById("exportMonthBtn");
 const exportYearBtn  = document.getElementById("exportYearBtn");
 const clock        = document.getElementById("clock");
+
+// ✅ Table / Stats elements (ต้องประกาศเอง ห้ามหวัง global id)
+const total             = document.getElementById("total");
+const todayTotal        = document.getElementById("todayTotal");
+const activeToday       = document.getElementById("activeToday");
+const remainingScheduled= document.getElementById("remainingScheduled");
+const completedN        = document.getElementById("completedN");
+const cancelledN        = document.getElementById("cancelledN");
+
+const tableTitle        = document.getElementById("tableTitle");
+const missionBody       = document.getElementById("missionBody");
+const countNote         = document.getElementById("countNote");
+
 
 function isoToHHMM(iso){
   try{
