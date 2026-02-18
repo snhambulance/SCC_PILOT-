@@ -689,6 +689,79 @@ OPERATION.HTML (copy + paste) ✅ FINAL — FIXED (no boot-dup / no stray code)
   table td:nth-child(6){
     text-align: left;
   }
+/* ===============================
+   LOOK-AHEAD (+1) BADGE
+   =============================== */
+.badgeLookAhead{
+  display:inline-block;
+  margin-left:6px;
+  padding:1px 6px;
+
+  font-size:11px;
+  font-weight:600;
+  line-height:1.4;
+
+  color:#555;              /* ตัวหนังสือเทาเข้ม */
+  background:#f3f4f6;      /* เทาอ่อน */
+  border:1px solid #d1d5db;/* กรอบเทา */
+  border-radius:10px;
+
+  vertical-align:middle;
+}
+
+  /* ✅ Operation.html: allow From/To to wrap into multiple lines (no ellipsis) */
+#missionBody td:nth-child(5),
+#missionBody td:nth-child(6){
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  word-break: break-word;
+  line-height: 1.25;
+}
+/* ✅ Force child elements inside From/To to also wrap */
+#missionBody td:nth-child(5) * ,
+#missionBody td:nth-child(6) *{
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+/* =========================================================
+   ✅ TV CLICK FIX (Sony / SmartTV)
+   - prevent hidden overlays from catching clicks
+   - ensure filter controls sit above sticky thead/table layers
+========================================================= */
+
+/* 1) Default: overlays must NOT catch pointer events when hidden */
+.modalOverlay,
+.stampOverlay,
+.cancelOverlay{
+  pointer-events: none;  /* ปิด = ห้ามรับคลิก */
+}
+
+/* 2) When overlay is shown (display:flex) => allow clicks */
+.modalOverlay[style*="display: flex"],
+.stampOverlay[style*="display: flex"],
+.cancelOverlay[style*="display: flex"]{
+  pointer-events: auto;  /* เปิดแล้วค่อยรับคลิก */
+}
+
+/* 3) Make filter controls always above table sticky header */
+.cardHeader{ position:relative; z-index: 50; }
+.controls{ position:relative; z-index: 60; }
+
+/* Ensure inputs are clickable */
+#search, #statusFilter, #dateFilter{
+  position:relative;
+  z-index: 70;
+  pointer-events: auto;
+}
+
+/* Table area lower than controls */
+.tableWrap{ position:relative; z-index: 1; }
+
+/* Sticky header not over controls */
+thead th{ z-index: 2; }
+
 </style>
 </head>
 
@@ -1530,8 +1603,8 @@ function formatDepartureCell(m, selectedDay){
 
   // ✅ +1 tag (เฉพาะเคส look-ahead ที่เข้าเงื่อนไขจริง)
   const plus1 = (selectedDay && (typeof isLookAheadMission === "function") && isLookAheadMission(m, selectedDay))
-    ? `<span style="margin-left:6px; font-size:11px; font-weight:1000; padding:2px 8px; border-radius:999px; background:#111827; color:#fff;">+1</span>`
-    : "";
+  ? `<span class="badgeLookAhead">+1</span>`
+  : "";
 
   if (!cur && !orig) return `<span class="muted">-</span>`;
 
@@ -1873,24 +1946,6 @@ function isDeletedMission(m){
     m.isDeleted || m._deleted || m.deleted || m.deletedAt ||
     d.isDeleted || d._deleted || d.deleted || d.deletedAt
   );
-}
-function getEffectiveStatusForUI(m){
-  const raw = normStatusX(getRawStatusLocal(m));
-  // auto เฉพาะ 3 สถานะนี้ เพื่อใช้กับ Remaining / badge / stats ให้ consistent
-  if (raw === "Scheduled" || raw === "Preparing" || raw === "Delayed"){
-    return normStatusX(getAutoStatusForDisplay(m));
-  }
-  return raw;
-}
-
-function hasAnyStampStep(m){
-  const steps = m?.details?.OperationStamp?.steps;
-  return Array.isArray(steps) && steps.length > 0;
-}
-
-function isDoneEffStatus(eff){
-  const s = normStatusX(eff);
-  return s === "Completed" || s === "Cancelled" || s === "Aborted";
 }
 
 
@@ -2243,7 +2298,13 @@ function applyCommonFilters(rows){
 }
 
 /* =========================================================
-   ✅ MAIN RENDER (MATCH index today rules)
+   ✅ MAIN RENDER — WITH SINGLE MODE DECIDER
+   realToday   = getTodayISO()
+   selectedDay = getSelectedDayISO()
+   isOperational = (selectedDay === realToday)
+
+   - isOperational = false  => STRICT day view (missionDay === selectedDay only)
+   - isOperational = true   => OPERATIONAL logic (carry-over + done-day + look-ahead)
 ========================================================= */
 function render(){
 
@@ -2252,108 +2313,108 @@ function render(){
     ? window.FIRESTORE_MISSIONS.filter(m => !isDeletedMission(m))
     : [];
 
+  const realToday   = getTodayISO();
   const selectedDay = getSelectedDayISO();
+  const isOperational = (selectedDay === realToday);
 
   // ==============================
-  // ✅ Today Missions (Operational view) — MATCH index
+  // ✅ Build base list by mode
   // ==============================
-  const todayMissions = allMissions.filter(m => {
-    if (!m) return false;
+  let baseRows = [];
 
-    const stRaw = getRawStatus(m);
-    const st = normStatus(stRaw);
-    if (st === "Aborted") return false;
+  if (!isOperational){
+    // ✅ STRICT day view 100%: show ONLY missions of selectedDay
+    baseRows = allMissions.filter(m => {
+      if (!m) return false;
+      const st = normStatus(getRawStatus(m));
+      if (st === "Aborted") return false; // optional: กัน aborted ไม่ให้รก
+      const missionDay = getMissionDateISO(m);
+      return (missionDay === selectedDay);
+    });
+  } else {
+    // ✅ OPERATIONAL logic (เดิมของคุณ): today + carry-over + done-day + look-ahead
+    baseRows = allMissions.filter(m => {
+      if (!m) return false;
 
-    const missionDay = getMissionDateISO(m);
-    if (!missionDay) return false;
+      const stRaw = getRawStatus(m);
+      const st = normStatus(stRaw);
+      if (st === "Aborted") return false;
 
-    // (1) Done statuses: show ONLY on "statusChangedDay" (fallback missionDay)
-    if (st === "Completed" || st === "Cancelled"){
-      const changedDay = getStatusChangedDayISO(m) || missionDay;
-      return changedDay === selectedDay;
-    }
+      const missionDay = getMissionDateISO(m);
+      if (!missionDay) return false;
 
-    // (2) Carry-over active from previous days
-    if (isCarryOverActive(m, selectedDay)) return true;
+      // (1) Done statuses: show ONLY on "statusChangedDay" (fallback missionDay)
+      if (st === "Completed" || st === "Cancelled"){
+        const changedDay = getStatusChangedDayISO(m) || missionDay;
+        return changedDay === selectedDay;
+      }
 
-    // (3) Look-ahead tomorrow <01:00, ONLY after 22:30, ONLY when selectedDay = real today
-    if (isLookAheadMission(m, selectedDay)) return true;
+      // (2) Carry-over active from previous days
+      if (isCarryOverActive(m, selectedDay)) return true;
 
-    // (4) Normal: mission of the selected day
-    return missionDay === selectedDay;
-  });
+      // (3) Look-ahead tomorrow <01:00, ONLY after 22:30, ONLY when selectedDay = real today
+      if (isLookAheadMission(m, selectedDay)) return true;
 
-    // ==============================
-  // ✅ TOP STATS (NEW DEFINITIONS)
-  // Total (Today)     = จำนวนแถวที่ขึ้นใน Today’s Missions (รวม carryover)
-  // Active            = ใน Today’s Missions ที่มี stamp ≥ 1 step (ไม่สนวัน) และยังไม่ done
-  // Remaining         = ใน Today’s Missions ที่ effectiveStatus เป็น Scheduled หรือ Delayed
-  // Completed/Cancelled = done-day (todayMissions กรองแบบ done-day อยู่แล้ว)
-  // Total (Year)      = คงนับตาม getCountDayISO เดิม
-  // ==============================
-
-  // ✅ helpers (local to render, ไม่ต้องสร้าง global ใหม่)
-  function getEffectiveStatusForUI(m){
-    const raw = normStatus(getRawStatus(m));
-    if (raw === "Scheduled" || raw === "Preparing" || raw === "Delayed"){
-      return normStatus(getAutoStatusForDisplay(m)); // auto เฉพาะ 3 สถานะ
-    }
-    return raw;
-  }
-  function hasAnyStampStep(m){
-    const steps = m?.details?.OperationStamp?.steps;
-    return Array.isArray(steps) && steps.length > 0;
+      // (4) Normal: mission of the selected day
+      return missionDay === selectedDay;
+    });
   }
 
+  // ==============================
+  // ✅ TOP STATS (count from baseRows according to mode)
+  // ==============================
   const selectedYear = String(selectedDay || "").slice(0,4);
 
-  // Total (Year) — เดิมของคุณ
+  // Total (Year) — คงนับตาม getCountDayISO (เหมือนเดิม)
   const yearRows = allMissions.filter(m => {
     const day = getCountDayISO(m);
     return day && String(day).slice(0,4) === selectedYear;
   });
 
-  // Total (Today) — ใหม่: เท่ากับจำนวนแถวของ Today’s Missions (รวม carryover)
-  const totalToday = todayMissions.length;
+  // Total (Selected Date) — = จำนวนแถวที่แสดงตามโหมด
+  const totalSelected = baseRows.length;
 
-  // Active — ใหม่: มี stamp ≥1 step และไม่ done
-  const activeCount = todayMissions.filter(m => {
+  // Active — มี stamp ≥1 step และยังไม่ done
+  const activeCount = baseRows.filter(m => {
     const eff = getEffectiveStatusForUI(m);
     if (eff === "Completed" || eff === "Cancelled" || eff === "Aborted") return false;
     return hasAnyStampStep(m);
   }).length;
 
-  // Remaining — ใหม่: Scheduled หรือ Delayed (effective)
-  const remainingCount = todayMissions.filter(m => {
+  // Remaining Scheduled — Scheduled หรือ Delayed (effective)
+  const remainingCount = baseRows.filter(m => {
     const eff = getEffectiveStatusForUI(m);
     return eff === "Scheduled" || eff === "Delayed";
   }).length;
 
-  // Completed/Cancelled — ใหม่: done-day (todayMissions already respects it)
-  const completedToday = todayMissions.filter(m => getEffectiveStatusForUI(m) === "Completed").length;
-  const cancelledToday = todayMissions.filter(m => getEffectiveStatusForUI(m) === "Cancelled").length;
+  // Completed/Cancelled — นับจาก effective status ใน list ที่แสดง
+  const completedCount = baseRows.filter(m => getEffectiveStatusForUI(m) === "Completed").length;
+  const cancelledCount = baseRows.filter(m => getEffectiveStatusForUI(m) === "Cancelled").length;
 
   // set UI
   if (total) total.innerText = String(yearRows.length);
-  if (todayTotal) todayTotal.innerText = String(totalToday);
+  if (todayTotal) todayTotal.innerText = String(totalSelected);
   if (activeToday) activeToday.innerText = String(activeCount);
   if (remainingScheduled) remainingScheduled.innerText = String(remainingCount);
-  if (completedN) completedN.innerText = String(completedToday);
-  if (cancelledN) cancelledN.innerText = String(cancelledToday);
+  if (completedN) completedN.innerText = String(completedCount);
+  if (cancelledN) cancelledN.innerText = String(cancelledCount);
 
-  // Title (คงของคุณ หรือจะเปลี่ยนข้อความก็ได้)
+  // Title (ใส่ mode ให้ชัด)
   if (tableTitle){
     const titleDate = new Date(selectedDay + "T00:00:00");
-    tableTitle.innerText =
-      `Today Missions: ${titleDate.toLocaleDateString("th-TH", { year:"numeric", month:"short", day:"numeric" })}`;
+    const thDate = titleDate.toLocaleDateString("th-TH", { year:"numeric", month:"short", day:"numeric" });
+
+    tableTitle.innerText = isOperational
+      ? `Missions (Operational): ${thDate}`
+      : `Missions (Strict day): ${thDate}`;
   }
 
   // ==============================
-  // ✅ Today sorting + render (table only)
+  // ✅ Apply filters + sort + render
   // ==============================
-  let todayRows = applyCommonFilters(todayMissions);
+  let rows = applyCommonFilters(baseRows);
 
-  todayRows.sort((a,b)=>{
+  rows.sort((a,b)=>{
     const sa = normStatus(getAutoStatusForDisplay(a));
     const sb = normStatus(getAutoStatusForDisplay(b));
 
@@ -2368,19 +2429,18 @@ function render(){
     return String(a.id ?? "").localeCompare(String(b.id ?? ""));
   });
 
-  // render
-  if (!todayRows.length){
+  if (!rows.length){
     if (missionBody) missionBody.innerHTML = `<tr><td colspan="8" class="muted">No missions found.</td></tr>`;
     if (countNote) countNote.innerText = "";
     return;
   }
 
   if (missionBody){
-    missionBody.innerHTML = todayRows.map(m => {
+    missionBody.innerHTML = rows.map(m => {
       const typeShort = getTypeLabelForTable(m);
       const ft = getFromTo(m);
 
-      // ✅ status display = autoCompute ONLY for Scheduled/Preparing/Delayed (non-mutating)
+      // ✅ display status (non-mutating)
       const s = normStatus(getAutoStatusForDisplay(m));
 
       return `
@@ -2409,7 +2469,6 @@ function render(){
 
           <td>
             <div class="statusCell">
-              <!-- ✅ IMPORTANT: badge color must follow DISPLAY status -->
               <span class="badge ${badgeClassFromStatus(s)}">${escapeHtml(s)}</span>
               ${getStatusIconsHTML(s)}
             </div>
@@ -2431,8 +2490,13 @@ function render(){
     }).join("");
   }
 
-  if (countNote) countNote.innerText = `Showing ${todayRows.length} mission(s)`;
+  if (countNote){
+    countNote.innerText = isOperational
+      ? `Showing ${rows.length} mission(s) (Operational view)`
+      : `Showing ${rows.length} mission(s) (Strict day view)`;
+  }
 }
+
 
 // ✅ safeRender (keep)
 function safeRender(){
@@ -3258,6 +3322,78 @@ function __bootOperationPage(){
   hardResetDetailButtons();   // ✅ เพิ่มบรรทัดนี้
 
   setupDayRollover(); // ✅ เพิ่มบรรทัดนี้
+    /* =========================================================
+     ✅ TV CLICK DEBUG + FIX (date/status filters)
+     - logs whether click/pointer reaches the elements
+     - detects top element blocking via elementFromPoint
+     - fallback: focus input/select when parent gets click (SmartTV quirk)
+  ========================================================= */
+
+  (function tvClickFix(){
+    const ids = ["dateFilter","statusFilter"];
+    const pick = (el)=>{
+      if(!el) return "(none)";
+      const id = el.id ? "#"+el.id : "";
+      const cls = el.className ? "."+String(el.className).trim().split(/\s+/).join(".") : "";
+      return el.tagName + id + cls;
+    };
+
+    // 1) Attach listeners directly to inputs (if clicks reach them)
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+
+      ["click","pointerdown","mousedown","touchstart","focus"].forEach(ev=>{
+        el.addEventListener(ev, ()=> console.log("[TVDBG]", ev, "on", id), { passive:true });
+      });
+    });
+
+    // 2) HITTEST: find who is on top of the filter area (most useful on Sony)
+    function probe(){
+      ids.forEach(id=>{
+        const el = document.getElementById(id);
+        if(!el) return;
+
+        const r = el.getBoundingClientRect();
+        const x = Math.floor(r.left + Math.min(12, r.width/2));
+        const y = Math.floor(r.top  + Math.min(12, r.height/2));
+        const topEl = document.elementFromPoint(x, y);
+
+        console.log("[TVDBG][HITTEST]", id, "=>", pick(topEl), "(target:", pick(el)+")");
+      });
+    }
+    setTimeout(probe, 600);
+
+    // 3) Fallback: some TV browsers fire click on container, not on <input>/<select>
+    // so when .controls gets a click, force focus the correct control.
+    const controls = document.querySelector(".controls");
+    if (controls){
+      controls.addEventListener("click", (e)=>{
+        const t = e.target;
+        // If clicked outside actual input/select, focus the nearest one
+        if (!(t instanceof HTMLInputElement) && !(t instanceof HTMLSelectElement)){
+          const df = document.getElementById("dateFilter");
+          const sf = document.getElementById("statusFilter");
+
+          // prefer focusing the one near click position
+          // simple rule: if click was more to the right, focus date
+          try{
+            const x = e.clientX || 0;
+            const rDate = df?.getBoundingClientRect?.();
+            const rStat = sf?.getBoundingClientRect?.();
+            if (rDate && x >= rDate.left) df?.focus?.();
+            else sf?.focus?.();
+          }catch{
+            sf?.focus?.();
+          }
+        }
+      }, true);
+    }
+
+    // 4) If page comes back from BFCache, re-probe again
+    window.addEventListener("pageshow", ()=> setTimeout(probe, 300));
+  })();
+
 
   // ✅ ตอนเปิดหน้า
   __kickRender();
@@ -3311,6 +3447,96 @@ function __bootOperationPage(){
     __bootOperationPage();
   }
 })();
+
+/* =========================================================
+   ✅ LOOK-AHEAD AUTO REFRESH (22:30 gate + midnight drop)
+   - ensures "+1" appears after 22:30 and disappears after midnight
+   - works for both index.html and operation.html
+========================================================= */
+
+(function setupLookAheadWatcher(){
+  const dateEl = document.getElementById("dateFilter"); // may not exist in operation.html
+  const GATE_HHMM = "22:30";
+
+  function pad2(n){ return String(n).padStart(2,"0"); }
+  function toISODateLocal(d){
+    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  }
+  function toDT(dayISO, hhmm){
+    const m = /^(\d{2}):(\d{2})$/.exec(String(hhmm||"").trim());
+    if(!m) return null;
+    const d = new Date(dayISO + "T00:00:00");
+    d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    return d;
+  }
+  function getSelectedDay(){
+    // if no date filter, assume "today view"
+    if (!dateEl) return toISODateLocal(new Date());
+    return String(dateEl.value || "").slice(0,10) || toISODateLocal(new Date());
+  }
+
+  function fireRender(){
+    try{
+      if (typeof window.safeRender === "function") window.safeRender();
+      else if (typeof window.render === "function") window.render();
+    }catch(e){
+      console.error(e);
+    }
+  }
+
+  // --- state tracking ---
+  let lastNowDay = toISODateLocal(new Date());
+  let lastGateOpen = null; // null = unknown
+
+  function computeGateOpen(){
+    const now = new Date();
+    const todayISO = toISODateLocal(now);
+    const selectedDay = getSelectedDay();
+
+    // gate only matters when user views "today"
+    if (selectedDay !== todayISO) return false;
+
+    const gateDT = toDT(todayISO, GATE_HHMM);
+    return gateDT ? (now >= gateDT) : false;
+  }
+
+  function tick(){
+    const now = new Date();
+    const nowDay = toISODateLocal(now);
+    const selectedDay = getSelectedDay();
+
+    // 1) midnight: day changed -> if user is viewing "today", advance dateFilter and rerender
+    if (nowDay !== lastNowDay){
+      if (dateEl){
+        const picked = String(dateEl.value || "").slice(0,10);
+        // if user was viewing previous "today" (or empty), auto-advance
+        if (!picked || picked === lastNowDay){
+          dateEl.value = nowDay;
+        }
+      }
+      fireRender(); // ✅ drop +1 immediately after midnight
+      lastNowDay = nowDay;
+
+      // recompute gate state for new day
+      lastGateOpen = computeGateOpen();
+      return;
+    }
+
+    // 2) 22:30 gate: when it flips, rerender so +1 appears (or disappears if user changes date)
+    const gateOpen = computeGateOpen();
+    if (lastGateOpen === null) lastGateOpen = gateOpen;
+
+    if (gateOpen !== lastGateOpen){
+      fireRender();
+      lastGateOpen = gateOpen;
+    }
+  }
+
+  // tick frequently but light
+  setInterval(tick, 15 * 1000);
+  tick(); // run once
+})();
+
 </script>
 
 <script type="module">

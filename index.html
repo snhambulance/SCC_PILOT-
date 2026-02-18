@@ -586,6 +586,22 @@ td.col-to{
 td.col-type{ white-space:normal !important; }  /* allow clamp2 inside */
 
 
+/* +1 tag (look-ahead) — same feel as operation.html */
+.tinyTag{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:2px 8px;
+  border-radius:999px;
+  font-weight:900;
+  font-size:11px;
+  line-height:1;
+  background:#e0f2fe;   /* ฟ้าอ่อน */
+  color:#075985;        /* ฟ้าเข้ม */
+  border:1px solid #bae6fd;
+  vertical-align:middle;
+}
+
 
 </style>
 </head>
@@ -1745,7 +1761,7 @@ function getFromTo(m){
   };
 }
 
-/* ===== Departure cell (highlight edited time) ===== */
+//* ===== Departure cell (highlight edited time) ===== */
 function formatDepartureCell(m, selectedDay){
   const d = m.details || {};
   const cur  = String(d.departureFromHospital || "").trim();
@@ -1755,10 +1771,9 @@ function formatDepartureCell(m, selectedDay){
   const baseTime = (cur || orig);
   if (!baseTime) return `<span class="muted">-</span>`;
 
-  // ✅ +1 suffix เฉพาะเคสพรุ่งนี้ที่ถูก look-ahead มาโชว์ใน Today
-  const plus1 = (typeof isLookAheadMission === "function" && isLookAheadMission(m, selectedDay))
-    ? ` <span class="muted" style="font-size:12px;">· +1</span>`
-    : "";
+  // ✅ +1 tag เฉพาะเคสพรุ่งนี้ที่ถูก look-ahead มาโชว์ใน Today
+  const isLookAhead = (typeof isLookAheadMission === "function" && isLookAheadMission(m, selectedDay));
+  const plus1 = isLookAhead ? ` <span class="tinyTag">+1</span>` : "";
 
   if (changed){
     return `
@@ -1775,6 +1790,7 @@ function formatDepartureCell(m, selectedDay){
     </span>
   `;
 }
+
 
 
 function canEditDeparture(m){
@@ -3021,47 +3037,69 @@ async function render(){
   allMissions = (Array.isArray(allMissions) ? allMissions : []).filter(m => !isDeletedMission(m));
 
   const selectedDay = getSelectedDayISO();
+  const realToday = getTodayISO();
+const isOperationalView = (selectedDay === realToday); 
+// ✅ true = วันนี้จริง -> ใช้ carry-over + look-ahead + follow-up
+// ✅ false = ดูวันอื่น -> strict day (แสดงเฉพาะงานวันนั้น)
+
 
   // ==============================
   // ✅ Today table (Operational view) — FINAL (A–D)
   // ==============================
-  const todayMissions = allMissions.filter(m => {
-    if (!m) return false;
+  // ==============================
+// ✅ Today table (2-mode)
+// - Schedule view (selectedDay != realToday): show ONLY that day
+// - Operational view (today only): include carry-over + look-ahead
+// - Completed/Cancelled: show only on statusChangedDay (same as your rule)
+// ==============================
+// ==============================
+// ✅ Today table (2-mode)
+// - Schedule view (selectedDay != realToday): show ONLY that day
+// - Operational view (today only): include carry-over + look-ahead
+// - Completed/Cancelled: show only on statusChangedDay (same as your rule)
+// ==============================
+const todayMissions = allMissions.filter(m => {
+  if (!m) return false;
 
-    const st = normStatusX(getRawStatusLocal(m));
-    if (st === "Aborted") return false;
+  const st = normStatusX(getRawStatusLocal(m));
+  if (st === "Aborted") return false;
 
-    const missionDay = getMissionDateISO(m);
-    if (!missionDay) return false;
+  const missionDay = getMissionDateISO(m);
+  if (!missionDay) return false;
 
-    // (1) Done statuses: show ONLY on "statusChangedDay" (fallback missionDay)
-    if (st === "Completed" || st === "Cancelled"){
-      const changedDay = getStatusChangedDayISO(m) || missionDay;
-      return changedDay === selectedDay;
-    }
+  // Done statuses: show ONLY on "statusChangedDay" (fallback missionDay)
+  if (st === "Completed" || st === "Cancelled"){
+    const changedDay = getStatusChangedDayISO(m) || missionDay;
+    return changedDay === selectedDay;
+  }
 
-    // (2) Carry-over active from previous days (active + missionDay < selectedDay)
-    if (isCarryOverActive(m, selectedDay)) return true;
-
-    // (3) Look-ahead: tomorrow <01:00, ONLY after 22:30, ONLY when selectedDay = real today
-    if (isLookAheadMission(m, selectedDay)) return true;
-
-    // (4) Normal: mission of the selected day
+  // ✅ Schedule view: STRICT day only (no carry-over / no look-ahead)
+  if (!isOperationalView){
     return missionDay === selectedDay;
-  });
+  }
 
-  // ==============================
-  // ✅ Follow-up table (A–C)
-  // - เฉพาะ “เมื่อวาน” (selectedDay - 1) ที่ยัง active
-  // - ซ้ำกับ Today ได้ (ก่อนมี action)
-  // - แต่ถ้ามี stamp/reschedule/cancel ใน selectedDay -> ต้องหายจาก follow-up
-  // ==============================
+  // ✅ Operational view (today only): carry-over + look-ahead + today's missions
+  if (isCarryOverActive(m, selectedDay)) return true;
+  if (isLookAheadMission(m, selectedDay)) return true;
+
+  return missionDay === selectedDay;
+});
+
+
+// ==============================
+// ✅ Follow-up table (2-mode)
+// - Schedule view: OFF (avoid confusion + stop accumulation problem)
+// - Operational view (today only): your previous-day follow-up rules
+// ==============================
+const followMissions = (() => {
+  if (!isOperationalView) return []; // ✅ ปิด follow-up เมื่อดูวันอนาคต/อดีต
+
   const prevDay = addDaysISO(selectedDay, -1);
 
-  const followMissions = allMissions.filter(m => {
+  return allMissions.filter(m => {
     if (!m) return false;
 
-    // ✅ ห้าม Done เข้า follow-up
+    // ✅ never include done in follow-up
     if (isDoneMission(m)) return false;
 
     const st = normStatusX(getRawStatusLocal(m));
@@ -3073,14 +3111,16 @@ async function render(){
     // ✅ Follow-up = “เมื่อวานเท่านั้น”
     if (missionDay !== prevDay) return false;
 
-    // ✅ ต้องยัง active เท่านั้น
+    // ✅ ต้องยัง active
     if (!isActiveOpsStatus(st)) return false;
 
-    // ✅ หลังมี stamp/reschedule/cancel ของวันนี้ -> ห้ามซ้ำ (ตัดออกจาก follow-up)
+    // ✅ ถ้ามี manual action ใน selectedDay และ mission อยู่ Today แล้ว -> ตัดออกจาก follow-up
     if (shouldSuppressFollowUpBecauseAction(m, selectedDay)) return false;
 
     return true;
   });
+})();
+
 
   // ==============================
 // ✅ TOP STATS (SINGLE SOURCE OF TRUTH — same logic everywhere)
@@ -3176,6 +3216,8 @@ if (tableTitle){
         const typeShort = getTypeLabelForTable(m);
         const ft = getFromTo(m);
         const s = getAutoStatusForDisplay(m);
+        const isLookAhead = isLookAheadMission(m, selectedDay);
+      const rowClass = isLookAhead ? "lookAheadRow" : "";
 
         return `
           <tr>
@@ -3612,6 +3654,96 @@ console.log("fsUpdateMission ready:", typeof fsUpdateMission);
   window.CURRENT_MISSIONS = await readMissionsSourceOfTruth();
   await render();
 })();
+
+/* =========================================================
+   ✅ LOOK-AHEAD AUTO REFRESH (22:30 gate + midnight drop)
+   - ensures "+1" appears after 22:30 and disappears after midnight
+   - works for both index.html and operation.html
+========================================================= */
+
+(function setupLookAheadWatcher(){
+  const dateEl = document.getElementById("dateFilter"); // may not exist in operation.html
+  const GATE_HHMM = "22:30";
+
+  function pad2(n){ return String(n).padStart(2,"0"); }
+  function toISODateLocal(d){
+    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  }
+  function toDT(dayISO, hhmm){
+    const m = /^(\d{2}):(\d{2})$/.exec(String(hhmm||"").trim());
+    if(!m) return null;
+    const d = new Date(dayISO + "T00:00:00");
+    d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    return d;
+  }
+  function getSelectedDay(){
+    // if no date filter, assume "today view"
+    if (!dateEl) return toISODateLocal(new Date());
+    return String(dateEl.value || "").slice(0,10) || toISODateLocal(new Date());
+  }
+
+  function fireRender(){
+    try{
+      if (typeof window.safeRender === "function") window.safeRender();
+      else if (typeof window.render === "function") window.render();
+    }catch(e){
+      console.error(e);
+    }
+  }
+
+  // --- state tracking ---
+  let lastNowDay = toISODateLocal(new Date());
+  let lastGateOpen = null; // null = unknown
+
+  function computeGateOpen(){
+    const now = new Date();
+    const todayISO = toISODateLocal(now);
+    const selectedDay = getSelectedDay();
+
+    // gate only matters when user views "today"
+    if (selectedDay !== todayISO) return false;
+
+    const gateDT = toDT(todayISO, GATE_HHMM);
+    return gateDT ? (now >= gateDT) : false;
+  }
+
+  function tick(){
+    const now = new Date();
+    const nowDay = toISODateLocal(now);
+    const selectedDay = getSelectedDay();
+
+    // 1) midnight: day changed -> if user is viewing "today", advance dateFilter and rerender
+    if (nowDay !== lastNowDay){
+      if (dateEl){
+        const picked = String(dateEl.value || "").slice(0,10);
+        // if user was viewing previous "today" (or empty), auto-advance
+        if (!picked || picked === lastNowDay){
+          dateEl.value = nowDay;
+        }
+      }
+      fireRender(); // ✅ drop +1 immediately after midnight
+      lastNowDay = nowDay;
+
+      // recompute gate state for new day
+      lastGateOpen = computeGateOpen();
+      return;
+    }
+
+    // 2) 22:30 gate: when it flips, rerender so +1 appears (or disappears if user changes date)
+    const gateOpen = computeGateOpen();
+    if (lastGateOpen === null) lastGateOpen = gateOpen;
+
+    if (gateOpen !== lastGateOpen){
+      fireRender();
+      lastGateOpen = gateOpen;
+    }
+  }
+
+  // tick frequently but light
+  setInterval(tick, 15 * 1000);
+  tick(); // run once
+})();
+
 </script>
 
 

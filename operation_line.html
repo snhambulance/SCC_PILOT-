@@ -1277,6 +1277,21 @@ table td:nth-child(6){
 .statusIcons.transporting{ color:#166534; }  /* เขียว */
 .statusIcons.returning{ color:#9a3412; }     /* ส้ม */
 
+/* ===== +1 tiny pill (match operation) ===== */
+.tinyTag{
+  display:inline-block;
+  margin-left:6px;
+  padding:2px 8px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+  line-height:1.2;
+  background:#eef2ff;      /* soft */
+  border:1px solid #c7d2fe;
+  color:#3730a3;
+  vertical-align:middle;
+  white-space:nowrap;
+}
 
 </style>
 </head>
@@ -1997,21 +2012,44 @@ function getEffectiveStatusForUI(m){
 
 
 /* =======================
-   Departure cell (strike-through original)
+   Departure cell (strike-through original) + ✅ +1 pill
 ======================= */
 function formatDepartureCell(m){
   const d = m.details || {};
-  const cur = d.departureFromHospital || "";
-  const orig = d.departureOriginal || "";
-  const changed = orig && cur && (orig !== cur);
+  const cur  = String(d.departureFromHospital || "").trim();
+  const orig = String(d.departureOriginal || "").trim();
+  const changed = !!(orig && cur && orig !== cur);
 
-  if (!cur && !orig) return `<span class="muted">-</span>`;
+  const baseTime = (cur || orig);
+  if (!baseTime) return `<span class="muted">-</span>`;
+
+  const selectedDay = getSelectedDayISO();
+  const plus1 = (typeof isLookAheadMission === "function" && isLookAheadMission(m, selectedDay))
+    ? `<span class="tinyTag">+1</span>`
+    : "";
+
   if (changed){
-    return `<span style="text-decoration:line-through;color:#6b7280;font-weight:900;margin-right:8px;display:inline-block;">${escapeHtml(orig)}</span>
-            <span style="font-weight:1000;color:#111827;display:inline-block;">${escapeHtml(cur)}</span>`;
+    return `
+      <span class="depWrap">
+        <span style="text-decoration:line-through;color:#6b7280;font-weight:900;margin-right:8px;display:inline-block;">
+          ${escapeHtml(orig)}
+        </span>
+        <span style="font-weight:1000;color:#111827;display:inline-block;">
+          ${escapeHtml(cur)}${plus1}
+        </span>
+      </span>
+    `;
   }
-  return `<span style="font-weight:1000;color:#111827;display:inline-block;">${escapeHtml(cur || orig)}</span>`;
+
+  return `
+    <span class="depWrap">
+      <span style="font-weight:1000;color:#111827;display:inline-block;">
+        ${escapeHtml(baseTime)}${plus1}
+      </span>
+    </span>
+  `;
 }
+
 
 /* =======================
    DETAILS RENDER (read-only)
@@ -2552,6 +2590,85 @@ function safeRender(){
   }
 }
 window.safeRender = safeRender;
+window.addEventListener("pageshow", () => window.safeRender?.());
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) window.safeRender?.();
+});
+/* =======================
+   ✅ LOOK-AHEAD WATCHER
+   - +1 appears at 22:30 (when viewing real "today")
+   - +1 disappears after midnight (auto)
+======================= */
+function addDaysISO(isoDay, n){
+  if (!isoDay) return "";
+  const d = new Date(isoDay + "T00:00:00");
+  d.setDate(d.getDate() + (n||0));
+  return toISODateLocal(d);
+}
+
+function _hhmmToMin(hhmm){
+  const s = String(hhmm || "").trim();
+  if (!/^\d{1,2}:\d{2}$/.test(s)) return NaN;
+  const [h,m] = s.split(":").map(n => parseInt(n,10));
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return NaN;
+  return h*60 + m;
+}
+
+function isLookAheadMission(m, selectedDay){
+  // show +1 only when user is viewing "today" (operational view)
+  const today = getTodayISO();
+  if (selectedDay !== today) return false;
+
+  const missionDay = getMissionDateISO(m);
+  if (!missionDay) return false;
+
+  const tomorrow = addDaysISO(today, 1);
+  if (missionDay !== tomorrow) return false;
+
+  // only after 22:30, but still the same calendar day
+  const now = new Date();
+  const nowDay = toISODateLocal(now);
+  if (nowDay !== today) return false; // after midnight => hide automatically
+
+  const minsNow = now.getHours()*60 + now.getMinutes();
+  if (minsNow < (22*60 + 30)) return false;
+
+  // ✅ NEW: only include tomorrow missions with departure before 01:00
+  const d = m?.details || {};
+  const dep = String(d.departureFromHospital || d.departureOriginal || "").trim();
+  const depMin = _hhmmToMin(dep);
+  if (!Number.isFinite(depMin)) return false;
+
+  return depMin < (1*60); // < 01:00
+}
+
+
+(function setupLookAheadWatcher(){
+  let lastBucket = ""; // track (day + before/after 22:30)
+  function bucket(){
+    const now = new Date();
+    const day = toISODateLocal(now);
+    const mins = now.getHours()*60 + now.getMinutes();
+    const phase = (mins >= (22*60+30)) ? "LATE" : "EARLY";
+    return day + "|" + phase;
+  }
+
+  lastBucket = bucket();
+
+  setInterval(() => {
+    const b = bucket();
+    if (b !== lastBucket){
+      lastBucket = b;
+      window.safeRender?.(); // +1 refresh at 22:30 and midnight
+    }
+  }, 15000);
+
+  window.addEventListener("pageshow", () => window.safeRender?.());
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) window.safeRender?.();
+  });
+})();
 
 
 /* =======================
@@ -2577,36 +2694,60 @@ const changedByAuto = false;
 
 // -----------------------
 // ✅ TOP STATS (อิง selectedDay)
+// + ✅ Operational vs Strict mode
 // -----------------------
 const selectedDay = getSelectedDayISO();
+const realToday   = getTodayISO();
+const isOperational = (selectedDay === realToday);
+
 const selectedYear = String(selectedDay || "").slice(0,4);
 
 // ✅ source-of-truth + exclude deleted
 const all = missions.filter(m => !isDeletedMission(m));
 
-// ✅ Today's Missions table set (includes carryover not-done missions)
-const todayMissions = all.filter(m => {
-  const raw = normStatus(getRawStatusLocal(m));
-  if (raw === "Aborted") return false;
+// ✅ set สำหรับตาราง + stat (ตัวเดียวกันเสมอ)
+let todayMissions = [];
 
-  const eff = getEffectiveStatusForUI(m);
-  const missionDay = getMissionDateISO(m);
-  if (!missionDay) return false;
+// ✅ Strict day view (selectedDay != realToday) = missionDay เท่านั้น
+if (!isOperational){
+  todayMissions = all.filter(m => {
+    const raw = normStatus(getRawStatusLocal(m));
+    if (raw === "Aborted") return false;
 
-  // ✅ Done statuses: show on the day they became done (done-day logic)
-  if (isDoneStatus(eff)){
-    const changedDay = getStatusChangedDayISO(m) || missionDay;
-    return changedDay === selectedDay;
-  }
+    const missionDay = getMissionDateISO(m);
+    if (!missionDay) return false;
 
-  // ✅ Show missions of selected day
-  if (missionDay === selectedDay) return true;
+    // ✅ strict จริง: เอาเฉพาะเคสที่ missionDay ตรงวันนั้นเท่านั้น
+    return missionDay === selectedDay;
+  });
+}else{
+  // ✅ Operational logic (เฉพาะ "วันนี้จริง" เท่านั้น)
+  todayMissions = all.filter(m => {
+    const raw = normStatus(getRawStatusLocal(m));
+    if (raw === "Aborted") return false;
 
-  // ✅ Carryover: mission from earlier days but still NOT done
-  if (missionDay < selectedDay) return true;
+    const eff = getEffectiveStatusForUI(m);
+    const missionDay = getMissionDateISO(m);
+    if (!missionDay) return false;
 
-  return false;
-});
+    // ✅ Done statuses: show on the day they became done (done-day logic)
+    if (isDoneStatus(eff)){
+      const changedDay = getStatusChangedDayISO(m) || missionDay;
+      return changedDay === selectedDay;
+    }
+
+    // ✅ Show missions of selected day
+    if (missionDay === selectedDay) return true;
+
+    // ✅ Carryover: mission from earlier days but still NOT done
+    if (missionDay < selectedDay) return true;
+
+        // ✅ Look-ahead: show tomorrow missions after 22:30 (+1)
+    if (isLookAheadMission(m, selectedDay)) return true;
+
+    return false;
+  });
+}
 
 // ✅ Year rows (อิง mission day)
 const yearRows = all.filter(m => {
@@ -2614,7 +2755,7 @@ const yearRows = all.filter(m => {
   return day && String(day).slice(0,4) === selectedYear;
 });
 
-// ✅ Stats from todayMissions (match your definitions)
+// ✅ Stats from todayMissions
 const totalToday = todayMissions.length;
 
 // Active = started stamp at least 1 step (from today's table set), not done
@@ -2624,13 +2765,13 @@ const activeToday = todayMissions.filter(m => {
   return hasStartedStamp(m);
 }).length;
 
-// Remaining Scheduled = Scheduled + Delayed in Today's table (carryover included)
+// Remaining Scheduled = Scheduled + Delayed in Today's table set
 const remaining = todayMissions.filter(m => {
   const eff = getEffectiveStatusForUI(m);
   return (eff === "Scheduled" || eff === "Delayed");
 }).length;
 
-// Completed/Cancelled = same done-day logic (todayMissions already respects it)
+// Completed/Cancelled (นับจาก status ในชุด todayMissions)
 const completedToday = todayMissions.filter(m => getEffectiveStatusForUI(m) === "Completed").length;
 const cancelledToday = todayMissions.filter(m => getEffectiveStatusForUI(m) === "Cancelled").length;
 
@@ -2648,7 +2789,6 @@ if (elActiveToday) elActiveToday.innerText = activeToday;
 if (elRemainScheduled) elRemainScheduled.innerText = remaining;
 if (elCompletedToday) elCompletedToday.innerText = completedToday;
 if (elCancelledToday) elCancelledToday.innerText = cancelledToday;
-
 
   // -----------------------
   // FILTERS + TABLE TITLE

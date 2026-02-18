@@ -12,7 +12,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
 import {
-  getFirestore,
+  initializeFirestore,   // ✅ เพิ่ม
   doc,
   setDoc,
   getDoc,
@@ -26,6 +26,7 @@ import {
   getDocs,
 } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
+
 /* 🔧 YOUR CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyC2CZWT1jDRIs2th7x8pXI9m3Gkw8bNqVg",
@@ -38,7 +39,15 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+
+// ✅ FIX: Force Long Polling
+// แก้ปัญหา Firestore Listen 404 / 400
+// โดยเฉพาะ LINE webview / hospital proxy / restrictive network
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+  useFetchStreams: false,
+});
+
 
 /* ========= utils ========= */
 function cleanUndefined(obj) {
