@@ -2435,67 +2435,87 @@ function render(){
     return;
   }
 
-  if (missionBody){
-    missionBody.innerHTML = rows.map(m => {
-      const typeShort = getTypeLabelForTable(m);
-      const ft = getFromTo(m);
-
-      // ✅ display status (non-mutating)
-      const s = normStatus(getAutoStatusForDisplay(m));
-
-      return `
-        <tr>
-          <td><strong>${escapeHtml(m.id ?? "-")}</strong></td>
-          <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
-          <td>${formatDepartureCell(m, selectedDay)}</td>
-
-          <td class="col-type">
-            <div class="clamp2" title="${escapeHtml(typeShort)}">
-              ${escapeHtml(typeShort)}
-            </div>
-          </td>
-
-          <td class="col-from">
-            <div class="clamp1" title="${escapeHtml(ft.from || "-")}">
-              ${escapeHtml(ft.from || "-")}
-            </div>
-          </td>
-
-          <td class="col-to">
-            <div class="clamp1" title="${escapeHtml(ft.to || "-")}">
-              ${escapeHtml(ft.to || "-")}
-            </div>
-          </td>
-
-          <td>
-            <div class="statusCell">
-              <span class="badge ${badgeClassFromStatus(s)}">${escapeHtml(s)}</span>
-              ${getStatusIconsHTML(s)}
-            </div>
-          </td>
-
-          <td>
-            <div class="actionCell">
-              <button class="btn light tiny" type="button" onclick="openDetails('${escapeHtml(m.id)}')">Details</button>
-              ${
-                (() => {
-                  const st = getTableOnDutyBtnState(m);
-                  return `<button class="btn pill tiny ${st.cls}" type="button" onclick="openStamp('${escapeHtml(m.id)}')">${escapeHtml(st.text)}</button>`;
-                })()
-              }
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join("");
+    // ==============================
+  // ✅ Render table with collapse (Done group)
+  // ==============================
+  function isDoneForCollapse(m){
+    const s = normStatus(getAutoStatusForDisplay(m));
+    return (s === "Completed" || s === "Cancelled");
   }
+
+  const activeRows = rows.filter(m => !isDoneForCollapse(m));
+  const doneRows   = rows.filter(m =>  isDoneForCollapse(m));
+
+  function renderMissionRow(m){
+    const typeShort = getTypeLabelForTable(m);
+    const ft = getFromTo(m);
+    const s  = normStatus(getAutoStatusForDisplay(m)); // non-mutating
+
+    return `
+      <tr>
+        <td><strong>${escapeHtml(m.id ?? "-")}</strong></td>
+        <td>${escapeHtml(getMissionDateISO(m) || "-")}</td>
+        <td>${formatDepartureCell(m, selectedDay)}</td>
+
+        <td class="col-type">
+          <div class="clamp2" title="${escapeHtml(typeShort)}">${escapeHtml(typeShort)}</div>
+        </td>
+
+        <td class="col-from">
+          <div class="clamp1" title="${escapeHtml(ft.from || "-")}">${escapeHtml(ft.from || "-")}</div>
+        </td>
+
+        <td class="col-to">
+          <div class="clamp1" title="${escapeHtml(ft.to || "-")}">${escapeHtml(ft.to || "-")}</div>
+        </td>
+
+        <td>
+          <div class="statusCell">
+            <span class="badge ${badgeClassFromStatus(s)}">${escapeHtml(s)}</span>
+            ${getStatusIconsHTML(s)}
+          </div>
+        </td>
+
+        <td>
+          <div class="actionCell">
+            <button class="btn light tiny" type="button" onclick="openDetails('${escapeHtml(m.id)}')">Details</button>
+            ${
+              (() => {
+                const st = getTableOnDutyBtnState(m);
+                return `<button class="btn pill tiny ${st.cls}" type="button" onclick="openStamp('${escapeHtml(m.id)}')">${escapeHtml(st.text)}</button>`;
+              })()
+            }
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  let html = "";
+
+  // Active
+  html += activeRows.length
+    ? activeRows.map(renderMissionRow).join("")
+    : `<tr><td colspan="8" class="muted">No active missions</td></tr>`;
+
+  // Done (collapsible)
+  if (doneRows.length){
+    html += dividerRow();
+    html += groupHeaderRow("done", doneRows.length);
+
+    if (!isCollapsed("done")){
+      html += dividerRow();
+      html += doneRows.map(renderMissionRow).join("");
+    }
+  }
+
+  if (missionBody) missionBody.innerHTML = html;
 
   if (countNote){
-    countNote.innerText = isOperational
-      ? `Showing ${rows.length} mission(s) (Operational view)`
-      : `Showing ${rows.length} mission(s) (Strict day view)`;
+    const modeTxt = isOperational ? "Operational view" : "Strict day view";
+    countNote.innerText = `Showing ${rows.length} mission(s): Active ${activeRows.length} + Done ${doneRows.length} (${modeTxt})`;
   }
-}
+  }
 
 
 // ✅ safeRender (keep)
@@ -2503,6 +2523,7 @@ function safeRender(){
   try{ return render(); }catch(e){ console.error(e); }
 }
 window.safeRender = safeRender;
+
 
 /* =========================================================
    DETAILS MODAL
