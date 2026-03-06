@@ -53,7 +53,14 @@ FORM.HTML (copy + paste) ✅ UPDATED (SYNC)
     padding:14px;
     background:#fff;
   }
-  .section h2{ margin:0 0 10px; font-size:16px; font-weight:900; color:#111827; }
+  .section h2{
+  margin:0 0 10px;
+  font-size:17px;
+  font-weight:900;
+  color:#444444;
+  border-bottom:2px solid #e5e7eb;
+  padding-bottom:6px;
+}
 
   .actions{
     display:flex;
@@ -146,6 +153,19 @@ FORM.HTML (copy + paste) ✅ UPDATED (SYNC)
     cursor:pointer;
     font-size:13px;
   }
+
+  .age-row{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:12px;
+}
+
+.pin-row{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:16px;
+}
+
   .resultItem:hover{ background:#fafcff; }
 
   @media (max-width: 720px){
@@ -169,11 +189,7 @@ input:disabled, select:disabled, textarea:disabled{
 <div class="wrap">
   <div class="card">
     <h1 id="pageTitle">Mission Request Form</h1>
-    <div class="muted">
-      Mission Details order: <b>Base → From + From detail → To + To detail → Departure</b>
-      <br>Vehicle Type (dropdown) อยู่ในฟอร์มหลักด้านบน
-      <br><b>Rule:</b> Ambulance only เฉพาะ <b>Mission Group 1 (EMS)</b> และ <b>Mission Group 2 (IFT)</b> เท่านั้น — นอกนั้นเลือก Vehicle ได้ครบ
-    </div>
+
 
     <form id="missionForm">
       <!-- ===== BASIC ===== -->
@@ -192,16 +208,14 @@ input:disabled, select:disabled, textarea:disabled{
 </div>
 
         <div class="field">
-  <label>Request date *</label>
+  <label>Request date *</label><div class="hint">วันที่รับเรื่อง</div>
   <input id="requestDate" type="date" required>
-  <div class="hint">วันที่รับเรื่อง</div>
 </div>
 
 
         <div class="field">
-          <label>Departure date *</label>
+          <label>Departure date *</label><div class="hint">วันที่นัดออกเดินทาง</div>
           <input id="date" type="date" required>
-        <div class="hint">วันที่นัดออกเดินทาง</div>
 </div>
 
         <div class="field">
@@ -215,25 +229,29 @@ input:disabled, select:disabled, textarea:disabled{
         </div>
 
         <div class="field">
-          <label>Display Label</label>
-          <input id="typeDisplay" readonly>
+        <label>Mission Type Detail</label>
+        <input id="typeDetail" placeholder="optional detail">
         </div>
+
+        <div class="field" id="typeDisplayRow" style="display:none;">
+  <label>Display Label</label>
+  <input id="typeDisplay" class="input">
+</div>
 
         <div class="field">
           <label>Vehicle Type *</label>
           <select id="vehicleTypeMain" required></select>
-          <div class="hint">Group 1–2 = Ambulance only, Group 3–7 = เลือกได้ครบ</div>
         </div>
 
-        <div class="field full">
-          <label>Vehicle (free text)</label>
-          <input id="vehicle" placeholder="Ambulance 01 / Van / etc.">
-        </div>
+        <div class="field" id="vehicleRow" style="display:none;">
+  <label>Vehicle (free text)</label>
+  <input id="vehicle" class="input">
+</div>
 
-        <div class="field full">
-          <label>Notes</label>
-          <textarea id="notes" placeholder="Short notes..."></textarea>
-        </div>
+        <div class="field" id="notesRow" style="display:none;">
+  <label>Notes</label>
+  <textarea id="notes" class="textarea"></textarea>
+</div>
       </div>
 
       <div class="lockHint" id="editLockHint" style="display:none;">
@@ -260,21 +278,24 @@ input:disabled, select:disabled, textarea:disabled{
             </select>
           </div>
 
-          <div class="field">
-            <label>Age (days)</label>
-            <input id="p_ageDays" type="number" min="0" step="1" placeholder="e.g., 10">
-          </div>
+          <div class="age-row">
 
-          <div class="field">
-            <label>Age (months)</label>
-            <input id="p_ageMonths" type="number" min="0" step="1" placeholder="e.g., 6">
-          </div>
+  <div class="field">
+    <label>Age (days)</label>
+    <input id="p_ageDays" type="number" min="0" step="1" placeholder="Day">
+  </div>
 
-          <div class="field">
-            <label>Age (years)</label>
-            <input id="p_ageYears" type="number" min="0" step="1" placeholder="e.g., 5">
-            <div class="hint">Fill only one: days OR months OR years (ระบบจะล็อกช่องอื่นอัตโนมัติ)</div>
-          </div>
+  <div class="field">
+    <label>Age (months)</label>
+    <input id="p_ageMonths" type="number" min="0" step="1" placeholder="Month">
+  </div>
+
+  <div class="field">
+    <label>Age (years)</label>
+    <input id="p_ageYears" type="number" min="0" step="1" placeholder="e.g., 5">
+  </div>
+
+</div>
 
           <div class="field">
             <label>Weight (kg)</label>
@@ -312,9 +333,6 @@ input:disabled, select:disabled, textarea:disabled{
       <div class="section">
         <h2>Mission Details (Base / Locations / Time Log)</h2>
         <div class="grid" id="detailsGrid"></div>
-        <div class="hint" style="margin-top:8px;">
-          From detail / To detail จะโชว์ใน Details modal เท่านั้น (ไม่โชว์ในตาราง)
-        </div>
       </div>
 
       <!-- ===== MAP PIN (optional) ===== -->
@@ -325,42 +343,41 @@ input:disabled, select:disabled, textarea:disabled{
           <button type="button" class="btn secondary tiny" id="openRouteBtn">Open Route (Google Maps)</button>
         </div>
 
-        <div class="field full">
-          <label>FROM pin</label>
-          <input id="fromLatLng" placeholder="0.000000, 0.000000" readonly>
+        <div class="pin-row">
 
-          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
-            <button type="button" class="btn light tiny" id="openGMapsFromBtn">Open Google Maps</button>
-            <button type="button" class="btn tiny" id="openMapFromBtn">Pick on Map (OSM)</button>
-          </div>
+  <div class="field">
+    <label>FROM pin : ออกเดินทางจาก</label>
+    <input id="fromLatLng" placeholder="lat,lng เช่น 13.7563,100.5018">
 
-          <div class="hint">
-            Tip: ค้นหาใน Google Maps แล้ว copy “lat,lng” มา paste ได้ (ดูช่องด้านล่าง)
-          </div>
-        </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+      <button type="button" class="btn light tiny" id="openGMapsFromBtn">Open Google Maps</button>
+      <button type="button" class="btn tiny" id="openMapFromBtn">Pick on Map (OSM)</button>
+    </div>
+  </div>
+
+
+  <div class="field">
+    <label>TO pin : เดินทางไปยัง</label>
+    <input id="toLatLng" placeholder="lat,lng เช่น 13.7563,100.5018">
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+      <button type="button" class="btn light tiny" id="openGMapsToBtn">Open Google Maps</button>
+      <button type="button" class="btn tiny" id="openMapToBtn">Pick on Map (OSM)</button>
+    </div>
+  </div>
+
+</div>
+
+<hr class="divider">
 
         <div class="field full" style="margin-top:12px;">
-          <label>TO pin</label>
-          <input id="toLatLng" placeholder="0.000000, 0.000000" readonly>
-
-          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
-            <button type="button" class="btn light tiny" id="openGMapsToBtn">Open Google Maps</button>
-            <button type="button" class="btn tiny" id="openMapToBtn">Pick on Map (OSM)</button>
-          </div>
-        </div>
-
-        <div class="field full" style="margin-top:12px;">
-          <label>Paste Google Maps link OR lat,lng (will set pin)</label>
-          <input id="pinPaste" placeholder="e.g., 13.7000,100.6000  OR  https://maps.google.com/...">
+          <label>Paste Google Maps link(URL)</label>
+          <input id="pinPaste" placeholder="e.g.,https://maps.google.com/...">
 
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
             <button type="button" class="btn secondary tiny" id="applyPasteFromBtn">Apply to FROM</button>
             <button type="button" class="btn secondary tiny" id="applyPasteToBtn">Apply to TO</button>
             <button type="button" class="btn danger tiny" id="clearPinsBtn">Clear</button>
-          </div>
-
-          <div class="hint">
-            Pin แก้ได้เสมอ และจะถูกบันทึกใน <b>locationChangeLog[]</b> โดยอัตโนมัติ
           </div>
         </div>
       </div>
@@ -430,6 +447,7 @@ const id          = document.getElementById("id");
 const date        = document.getElementById("date");
 const group       = document.getElementById("group");
 const typeKey     = document.getElementById("typeKey");
+const typeDetail  = document.getElementById("typeDetail");
 const typeDisplay = document.getElementById("typeDisplay");
 const vehicleTypeMain = document.getElementById("vehicleTypeMain");
 const vehicle     = document.getElementById("vehicle");
@@ -588,6 +606,9 @@ let isEditMode = false;
 let existingMissionSnapshot = null;
 let originalUid = null;   // ✅ edit primary key
 
+const mode = new URLSearchParams(location.search).get("mode");
+const operationMode = mode === "operation";
+
 
 /* ========= Mission dropdown master =========
    ✅ UPDATED: Added HHC_PICKUP / HHC_SEND
@@ -620,13 +641,28 @@ const MISSION_MASTER = [
     { key:"HOME_DISCH",  label:"5.2 Discharge home (ส่ง-คนไข้กลับบ้าน)", display:"Service" }
   ]},
   { group:"6. Home Health Care", items:[
-    { key:"HHC_PICKUP", label:"6.1 Home Health Care (รับ-คนไข้จากบ้าน)", display:"Service" },
-    { key:"HHC_SEND",   label:"6.2 Home Health Care (ส่ง-คนไข้กลับบ้าน)", display:"Service" },
-    { key:"HHC", label:"6. Home Health Care (legacy)", display:"Service" }
-  ]},
-  { group:"7. Other", items:[
-    { key:"OTHER", label:"7. Other (เขียนหมายเหตุเพิ่มได้)", display:"Service" }
-  ]}
+  { key:"HHC", label:"6. Home Health Care", display:"Home Health Care" }
+]},
+
+{ group:"7. Event / Public Support", items:[
+  { key:"EV_SCHOOL_SPORT", label:"School sports event", display:"School sports event" },
+  { key:"EV_SCHOOL_EVENT", label:"School event", display:"School event" },
+
+  { key:"EV_RUNNING", label:"Marathon / running event", display:"Marathon / running event" },
+  { key:"EV_CYCLING", label:"Cycling event", display:"Cycling event" },
+
+  { key:"EV_FOOTBALL", label:"Football match", display:"Football match" },
+  { key:"EV_BASKETBALL", label:"Basketball tournament", display:"Basketball tournament" },
+  { key:"EV_VOLLEYBALL", label:"Volleyball tournament", display:"Volleyball tournament" },
+  { key:"EV_BOXING", label:"Boxing event", display:"Boxing event" },
+
+  { key:"EV_OTHER_SPORT", label:"Other sport", display:"Other sport" },
+  { key:"EV_OTHER_EVENT", label:"Other event", display:"Other event" }
+]},
+
+{ group:"8. Other", items:[
+  { key:"OTHER_GENERAL", label:"Other", display:"Other" }
+]}
 ];
 
 const TYPE_BY_KEY = Object.fromEntries(
@@ -638,33 +674,45 @@ function isAmbulanceOnlyGroupIndex(groupIndex){
   return Number(groupIndex) === 0 || Number(groupIndex) === 1;
 }
 function fillVehicleTypeDropdown(keepValueIfPossible=true){
+
   const all = ["Ambulance","Mobility","Van","Car"];
-  const allowed = isAmbulanceOnlyGroupIndex(group.value) ? ["Ambulance"] : all;
   const prev = vehicleTypeMain.value;
 
   vehicleTypeMain.innerHTML = "";
-  allowed.forEach(v => {
+
+  all.forEach(v => {
     const opt = document.createElement("option");
     opt.value = v;
     opt.textContent = v;
     vehicleTypeMain.appendChild(opt);
   });
 
-  if (keepValueIfPossible && allowed.includes(prev)) vehicleTypeMain.value = prev;
-  else vehicleTypeMain.value = allowed[0] || "Ambulance";
+  // default สำหรับ EMS / IFT
+  if (!keepValueIfPossible){
+
+    if (group.value === "0" || group.value === "1"){
+      vehicleTypeMain.value = "Ambulance";
+    } else {
+      vehicleTypeMain.value = "Ambulance";
+    }
+
+  } else if (all.includes(prev)){
+    vehicleTypeMain.value = prev;
+  }
+
 }
 
 /* ========= Details fields ========= */
 const COMMON_DETAILS_FIELDS = {
   base: [
-    { id:"baseLocation", label:"Base (SNH / SMCH)", type:"select", options:["SNH","SMCH"], required:true },
-  ],
+  { id:"baseLocation", label:"Base (SNH / SMCH)", type:"select", options:["SNH","SMCH"], required:true, full:true },
+],
   fromDetail: [
-    { id:"fromDetail", label:"From detail (optional)", type:"text", full:true, placeholder:"เช่น อาคาร/ชั้น/วอร์ด/จุดนัด/Gate/Address/Contact" },
-  ],
+  { id:"fromDetail", label:"From detail (optional)", type:"text", placeholder:"เช่น อาคาร/ชั้น/วอร์ด/จุดนัด/Gate/Address/Contact" },
+],
   toDetail: [
-    { id:"toDetail", label:"To detail (optional)", type:"text", full:true, placeholder:"เช่น อาคาร/ชั้น/วอร์ด/จุดส่ง/Address/Contact" },
-  ],
+  { id:"toDetail", label:"To detail (optional)", type:"text", placeholder:"เช่น อาคาร/ชั้น/วอร์ด/จุดส่ง/Address/Contact" },
+],
   departure: [
     { id:"departureFromHospital", label:"Departure from SNH/SMCH hospital (เวลาที่ออก/จะออก)", type:"time", required:true, full:true }
   ]
@@ -673,9 +721,9 @@ const COMMON_DETAILS_FIELDS = {
 const DETAILS_FIELDS = {
   EMS_BASIC: [
     ...COMMON_DETAILS_FIELDS.base,
-    { id:"origin", label:"From (scene/location)", type:"text", full:true },
+    { id:"origin", label:"From (scene/location)", type:"text" },
     ...COMMON_DETAILS_FIELDS.fromDetail,
-    { id:"destination", label:"To (destination)", type:"text", full:true },
+    { id:"destination", label:"To (destination)", type:"text" },
     ...COMMON_DETAILS_FIELDS.toDetail,
     ...COMMON_DETAILS_FIELDS.departure
   ],
@@ -760,9 +808,9 @@ const DETAILS_FIELDS = {
 
   HOME_PICKUP: [
     { id:"baseLocation", label:"Base (SNH / SMCH) (optional)", type:"select", options:["","SNH","SMCH"] },
-    { id:"origin", label:"From (scene/location)", type:"text", full:true },
+    { id:"origin", label:"From (scene/location)", type:"text" },
     ...COMMON_DETAILS_FIELDS.fromDetail,
-    { id:"destination", label:"To (destination)", type:"text", full:true },
+    { id:"destination", label:"To (destination)", type:"text" },
     ...COMMON_DETAILS_FIELDS.toDetail,
     { id:"schedArriveHome", label:"Scheduled Arrival at Home — เวลานัดถึงบ้านผู้ป่วย", type:"time" },
     { id:"departureFromHospital", label:"Departure from hospital (เวลาที่ออก/จะออก)", type:"time", required:true, full:true }
@@ -770,27 +818,51 @@ const DETAILS_FIELDS = {
 
   HOME_DISCH: [
     ...COMMON_DETAILS_FIELDS.base,
-    { id:"origin", label:"From (scene/location)", type:"text", full:true },
+    { id:"origin", label:"From (scene/location)", type:"text" },
     ...COMMON_DETAILS_FIELDS.fromDetail,
-    { id:"destination", label:"To (destination)", type:"text", full:true },
+    { id:"destination", label:"To (destination)", type:"text" },
     ...COMMON_DETAILS_FIELDS.toDetail,
     { id:"preDepartureBriefing", label:"Pre-departure Briefing — เตรียมทีมก่อนออก", type:"time" },
     ...COMMON_DETAILS_FIELDS.departure
   ],
 
   HHC: [
-    { id:"baseLocation", label:"Base (SNH / SMCH) (optional)", type:"select", options:["","SNH","SMCH"] },
-    { id:"origin", label:"From (scene/location)", type:"text", full:true },
-    ...COMMON_DETAILS_FIELDS.fromDetail,
-    { id:"destination", label:"To (destination)", type:"text", full:true },
-    ...COMMON_DETAILS_FIELDS.toDetail,
-    { id:"departureFromHospital", label:"Departure from hospital (เวลาที่ออก/จะออก)", type:"time", required:true, full:true }
-  ],
+  { id:"baseLocation", label:"Base (SNH / SMCH) (optional)", type:"select", options:["","SNH","SMCH"] },
+  { id:"origin", label:"From (scene/location)", type:"text" },
+  ...COMMON_DETAILS_FIELDS.fromDetail,
+  { id:"destination", label:"To (destination)", type:"text" },
+  ...COMMON_DETAILS_FIELDS.toDetail,
+  { id:"departureFromHospital", label:"Departure from hospital (เวลาที่ออก/จะออก)", type:"time", required:true, full:true }
+],
 
-  HHC_PICKUP: "HHC",
-  HHC_SEND: "HHC",
+EV_SCHOOL_SPORT: [
+  ...COMMON_DETAILS_FIELDS.base,
+  { id:"origin", label:"From (scene/location)", type:"text" },
+  ...COMMON_DETAILS_FIELDS.fromDetail,
+  { id:"destination", label:"To (destination)", type:"text" },
+  ...COMMON_DETAILS_FIELDS.toDetail,
+  ...COMMON_DETAILS_FIELDS.departure
+],
 
-  OTHER: "HHC"
+EV_SCHOOL_EVENT: "EV_SCHOOL_SPORT",
+EV_RUNNING: "EV_SCHOOL_SPORT",
+EV_CYCLING: "EV_SCHOOL_SPORT",
+EV_FOOTBALL: "EV_SCHOOL_SPORT",
+EV_BASKETBALL: "EV_SCHOOL_SPORT",
+EV_VOLLEYBALL: "EV_SCHOOL_SPORT",
+EV_BOXING: "EV_SCHOOL_SPORT",
+EV_OTHER_SPORT: "EV_SCHOOL_SPORT",
+EV_OTHER_EVENT: "EV_SCHOOL_SPORT",
+
+OTHER_GENERAL: [
+  ...COMMON_DETAILS_FIELDS.base,
+  { id:"origin", label:"From (scene/location)", type:"text" },
+  ...COMMON_DETAILS_FIELDS.fromDetail,
+  { id:"destination", label:"To (destination)", type:"text" },
+  ...COMMON_DETAILS_FIELDS.toDetail,
+  ...COMMON_DETAILS_FIELDS.departure
+],
+
 };
 
 function resolveFields(typeKey){
@@ -915,16 +987,31 @@ if (f.required){
 
 /* ========= Dropdown init ========= */
 function initMissionDropdown(){
+
   group.innerHTML = "";
+
   MISSION_MASTER.forEach((g, i) => {
+
+    // operation mode: allow Home Service → Other
+    if (operationMode && i <= 3) return;
+
     const opt = document.createElement("option");
-    opt.value = String(i);
+    opt.value = String(i);   // ⭐ ยังใช้ index เดิม
     opt.textContent = g.group;
     group.appendChild(opt);
+
   });
-  group.value = "0";
+
+  // default group
+  if (operationMode){
+    group.value = "4";   // Home Service
+  } else {
+    group.value = "0";
+  }
+
   populateTypeDropdown();
 }
+
 function populateTypeDropdown(){
   const g = MISSION_MASTER[Number(group.value)];
   typeKey.innerHTML = "";
@@ -939,9 +1026,19 @@ function populateTypeDropdown(){
   fillVehicleTypeDropdown(false);
   buildDetailsFields(existingMissionSnapshot?.details || {});
 }
+
 function syncTypeMeta(){
   const it = TYPE_BY_KEY[typeKey.value];
-  typeDisplay.value = it?.display ?? "";
+
+  let display = it?.display ?? "";
+
+  const detail = (typeDetail?.value || "").trim();
+
+  if (detail){
+    display = display + " – " + detail;
+  }
+
+  typeDisplay.value = display;
 }
 
 group.addEventListener("change", () => {
@@ -953,6 +1050,7 @@ typeKey.addEventListener("change", () => {
   fillVehicleTypeDropdown(true);
   buildDetailsFields(existingMissionSnapshot?.details || {});
 });
+typeDetail.addEventListener("input", syncTypeMeta);
 
 /* ========= Header defaults ========= */
 // ✅ defaults
@@ -1107,6 +1205,33 @@ clearPinsBtn.addEventListener("click", () => {
     pushLocationLog("to", prevToLat, prevToLng, null, null, "clear");
   }
   setLatLngText();
+});
+
+// ⭐⭐⭐ ใส่ตรงนี้ ⭐⭐⭐
+
+fromLatLng.addEventListener("change", () => {
+
+  const p = parseLatLngFromText(fromLatLng.value);
+
+  if (!p){
+    alert("Invalid lat,lng");
+    return;
+  }
+
+  setPin("from", p.lat, p.lng, "manual");
+
+});
+toLatLng.addEventListener("change", () => {
+
+  const p = parseLatLngFromText(toLatLng.value);
+
+  if (!p){
+    alert("Invalid lat,lng");
+    return;
+  }
+
+  setPin("to", p.lat, p.lng, "manual");
+
 });
 
 function openGoogleMapsSearchByPin(lat, lng){
@@ -1525,106 +1650,188 @@ finalDetails.createdAtISO = String(
 
   missionGroup: MISSION_MASTER[Number(group.value)]?.group ?? "",
   typeKey: typeKey.value,
-  type: selected?.label ?? "",
-  typeDisplay: selected?.display ?? "",
+type: selected?.label ?? "",
+typeDisplay: typeDisplay.value,
+typeDetail: typeDetail.value.trim(),
   vehicle: vehicle.value.trim(),
   status: chosenStatus,
   notes: notes.value.trim(),
   details: finalDetails
 };
 
+// ⭐ รวม Mission Type + Detail เป็น label เดียว
+const label = String(newMissionAttempt.typeDisplay || "").trim();
+const detail = String(newMissionAttempt.typeDetail || "").trim();
+
+if (detail){
+  newMissionAttempt.typeDisplay = `${label} – ${detail}`;
+}else{
+  newMissionAttempt.typeDisplay = label;
+}
+
 // ✅ optional: clear legacy time field
 
-  // keep status inside details too (for older viewers)
-  newMissionAttempt.details.status = chosenStatus;
+// keep status inside details too (for older viewers)
+newMissionAttempt.details.status = chosenStatus;
 
-  let finalMission = newMissionAttempt;
+let finalMission = newMissionAttempt;
 
-  if (isEditMode && existing){
+if (isEditMode && existing){
+
   finalMission = Object.assign({}, existing);
+
   finalMission.id = existing.id;
+
+  // ⭐ FIX: update mission type + detail จาก form
+  finalMission.type = newMissionAttempt.type;
+  finalMission.typeKey = newMissionAttempt.typeKey;
+  finalMission.typeDisplay = newMissionAttempt.typeDisplay;
+  finalMission.typeDetail = newMissionAttempt.typeDetail;
 
   // ✅ allow status change from form dropdown
   finalMission.status = chosenStatus;
 
+  // details object
   finalMission.details = finalDetails;
   finalMission.details.status = chosenStatus;
 
-  if (isEmpty(existing.vehicle) && !isEmpty(newMissionAttempt.vehicle)) finalMission.vehicle = newMissionAttempt.vehicle;
-  if (isEmpty(existing.notes) && !isEmpty(newMissionAttempt.notes)) finalMission.notes = newMissionAttempt.notes;
+  if (isEmpty(existing.vehicle) && !isEmpty(newMissionAttempt.vehicle)){
+    finalMission.vehicle = newMissionAttempt.vehicle;
+  }
+
+  if (isEmpty(existing.notes) && !isEmpty(newMissionAttempt.notes)){
+    finalMission.notes = newMissionAttempt.notes;
+  }
 }
 
-// ✅ clear legacy field safely (หลัง finalMission มีอยู่แล้ว)
+// 🔧 append detail เข้า typeDisplay
+const d = finalMission.details || {};
+
+const extra =
+  finalMission.typeDetail ||   // ⭐ FIX
+  d.typeDetail ||
+  d.detail ||
+  d.otherDetail ||
+  d.otherText ||
+  d.hhcDetail ||
+  d.serviceDetail ||
+  "";
+
+if (extra && !finalMission.typeDisplay.endsWith(extra)){
+  finalMission.typeDisplay =
+    `${finalMission.typeDisplay} - ${extra}`;
+}
+
+// สร้าง displayLabel ที่ table ใช้
+finalMission.displayLabel = finalMission.typeDisplay;
+
+// ✅ clear legacy field safely
 if (finalMission && Object.prototype.hasOwnProperty.call(finalMission, "time")){
   delete finalMission.time;
 }
-  const list = readMissions();
-  let out = list.slice();
 
-  let action = "save";
+const list = readMissions();
+let out = list.slice();
+
+let action = "save";
+
 if (isEditMode){
   action = "update";
   const idx = out.findIndex(x => String(x.uid) === String(originalUid));
   if (idx >= 0) out[idx] = finalMission;
   else out.push(finalMission);
-} else {
+}else{
   // ✅ Add mode = always NEW mission even if HN same
   out.push(finalMission);
 }
 
-  // ✅ 1) เขียน Firestore ก่อน (ชัวร์สุด กันเคสหาย)
+
+// ✅ 1) Save Firestore first
 try{
+
   if (!window.DB) throw new Error("DB bridge not ready");
 
-  const docId = String(finalMission.uid); // ✅ ใช้ uid เป็น key
+  const docId = String(finalMission.uid);
 
   if (isEditMode && window.DB.updateMission){
     await window.DB.updateMission(docId, finalMission);
-  } else if (window.DB.saveMission){
+  }else if (window.DB.saveMission){
     await window.DB.saveMission(docId, finalMission);
-  } else {
+  }else{
     throw new Error("DB bridge missing saveMission/updateMission");
   }
+
 }catch(err){
+
   console.error(err);
   alert("บันทึกขึ้น Firestore ไม่สำเร็จ: " + (err?.message || err));
   return;
+
 }
 
 
-  // ✅ 2) (optional) เก็บ localStorage เป็น backup + sync ข้ามแท็บ
-  writeMissions(out, { action, missionId: finalMission.uid });
+// ✅ 2) localStorage backup
+writeMissions(out, { action, missionId: finalMission.uid });
 
-    // ✅ 3) ค่อย redirect
-  location.href = "index.html";
 
-}); // ✅ ปิด missionForm submit listener ให้ครบก่อนเริ่มปุ่มอื่นๆ
+// ✅ 3) redirect กลับหน้าที่เปิด form มา (ไม่เปิด tab ใหม่)
+const returnPage = operationMode ? "operation.html" : "index.html";
+
+location.replace(returnPage);
+
+
+}); // ปิด submit listener
+
+
 
 /* ========= Buttons ========= */
-backBtn.addEventListener("click", () => location.href = "index.html");
 
+// 🔙 BACK
+backBtn.addEventListener("click", () => {
+
+  const returnPage = operationMode ? "operation.html" : "index.html";
+
+  location.replace(returnPage);
+
+});
+
+
+
+// 🔄 RESET
 resetBtn.addEventListener("click", () => {
+
   if (isEditMode){
-    if (confirm("Edit mode: ต้องการกลับไปหน้า index โดยไม่บันทึกใช่ไหม?")) location.href = "index.html";
+
+    if (confirm("Exit without saving?")){
+
+      const returnPage = operationMode ? "operation.html" : "index.html";
+
+      location.replace(returnPage);
+
+    }
+
     return;
   }
+
   if (!confirm("Clear form ทั้งหมดใช่ไหม?")) return;
 
   missionForm.reset();
 
-if (requestDate) requestDate.value = toISODateLocal(new Date()); // ✅ NEW
-date.value = toISODateLocal(new Date());                         // departure date
+  if (requestDate) requestDate.value = toISODateLocal(new Date());
+  date.value = toISODateLocal(new Date());
 
-missionStatusEl.value = "Scheduled";
-
+  missionStatusEl.value = "Scheduled";
 
   isEditMode = false;
   existingMissionSnapshot = null;
   originalUid = null;
 
-  detailsState.fromLat = null; detailsState.fromLng = null;
-  detailsState.toLat = null; detailsState.toLng = null;
+  detailsState.fromLat = null;
+  detailsState.fromLng = null;
+  detailsState.toLat = null;
+  detailsState.toLng = null;
   detailsState.locationChangeLog = [];
+
   setLatLngText();
 
   initMissionDropdown();
@@ -1632,10 +1839,9 @@ missionStatusEl.value = "Scheduled";
   buildDetailsFields({});
   initAgeSoftLock();
 
-  // ✅ กัน required หลุดหลัง reset (ถ้าคุณมีฟังก์ชันนี้อยู่)
   enforceDateTimeAlwaysRequired();
-});
 
+});
 
 /* ========= INIT ========= */
 initMissionDropdown();

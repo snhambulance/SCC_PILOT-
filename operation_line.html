@@ -1579,15 +1579,44 @@ const TYPE_DISPLAY_LABELS = {
   "HOME_DISCH": "Discharge home (ส่ง-คนไข้กลับบ้าน)",
 
   "HHC": "Home Health Care",
-  "HHC_PICKUP": "Home Health Care",
-  "HHC_SEND": "Home Health Care",
-
-  "OTHER": "Other เขียนหมายเหตุเพิ่มได้"
+  "OTHER": "Other (เขียนหมายเหตุเพิ่มได้)"
 };
+
 function getTypeLabelForTable(m){
-  const k = String(m?.typeKey || "").trim();
-  return TYPE_DISPLAY_LABELS[k] || (m?.typeDisplay || m?.type || "-");
+
+  if (!m) return "-";
+
+  const key = String(m.typeKey || "").trim();
+
+  // =========================
+  // Event / HHC / Other
+  // =========================
+  if (key === "HHC" || key.startsWith("EV_") || key === "OTHER_GENERAL"){
+
+    const label = String(m.typeDisplay || "").trim();
+    if (!label) return "-";
+
+    // ถ้ามี pattern "A – B – B"
+    const parts = label.split("–").map(p => p.trim());
+
+    if (parts.length >= 3 && parts[1] === parts[2]){
+      return `${parts[0]} – ${parts[1]}`;
+    }
+
+    return label;
+  }
+
+  // =========================
+  // Default types
+  // =========================
+  const label = String(m.type || "").trim();
+
+  if (!label) return "-";
+
+  // remove numbering
+  return label.replace(/^\s*\d+(\.\d+)*\.?\s*/, "");
 }
+
 
 /* =======================
    REALTIME SYNC (Operation -> Index / Line)
@@ -1872,31 +1901,87 @@ function isoToHHMM(iso){
    FROM/TO MAPPING
 ======================= */
 function getFromTo(m){
+
   const d = m.details || {};
   const k = m.typeKey || "";
 
+  // IFT
   if (["IFT_BASIC_IN","IFT_ADV_IN","IFT_BASIC_OUT","IFT_ADV_OUT"].includes(k)){
-    return { from: d.referringHospital || "-", to: d.receivingHospital || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+    return {
+      from: d.referringHospital || d.origin || "-",
+      to: d.receivingHospital || d.destination || "-",
+      fromDetail: d.fromDetail || "",
+      toDetail: d.toDetail || ""
+    };
   }
+
+  // Airport clinic
   if (k === "AP_CLINIC_IFT"){
-    return { from: d.pickupPoint || "-", to: d.receivingHospital || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+    return {
+      from: d.pickupPoint || d.origin || "-",
+      to: d.receivingHospital || d.destination || "-",
+      fromDetail: d.fromDetail || "",
+      toDetail: d.toDetail || ""
+    };
   }
+
+  // Escort IN
   if (["AP_ESCORT_IN","TARMAC_IN"].includes(k)){
-    return { from: d.pickupPoint || "-", to: d.destinationHospital || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+    return {
+      from: d.pickupPoint || d.origin || "-",
+      to: d.destinationHospital || d.destination || "-",
+      fromDetail: d.fromDetail || "",
+      toDetail: d.toDetail || ""
+    };
   }
+
+  // Escort OUT
   if (["AP_ESCORT_OUT","TARMAC_OUT"].includes(k)){
-    return { from: d.sendingHospital || "-", to: d.dropoffPoint || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+    return {
+      from: d.sendingHospital || d.origin || "-",
+      to: d.dropoffPoint || d.destination || "-",
+      fromDetail: d.fromDetail || "",
+      toDetail: d.toDetail || ""
+    };
   }
+
+  // Procedure
   if (["PROC_SEND_WAIT_PICK","PROC_SEND"].includes(k)){
-    return { from: d.originHospital || "-", to: d.procedureFacility || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+    return {
+      from: d.originHospital || d.origin || "-",
+      to: d.procedureFacility || d.destination || "-",
+      fromDetail: d.fromDetail || "",
+      toDetail: d.toDetail || ""
+    };
   }
+
   if (k === "PROC_PICK"){
-    return { from: d.procedureFacility || "-", to: d.returnHospital || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+    return {
+      from: d.procedureFacility || d.origin || "-",
+      to: d.returnHospital || d.destination || "-",
+      fromDetail: d.fromDetail || "",
+      toDetail: d.toDetail || ""
+    };
   }
-  if (["HOME_PICKUP","HOME_DISCH","HHC","HHC_PICKUP","HHC_SEND","OTHER","EMS_BASIC","EMS_ADV"].includes(k)){
-    return { from: d.origin || "-", to: d.destination || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
-  }
-  return { from: "-", to: "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+
+  // EMS / Home / HHC / Event / Other
+return {
+  from:
+    d.from ||
+    d.origin ||
+    d.pickupPoint ||
+    d.referringHospital ||
+    "-",
+
+  to:
+    d.to ||
+    d.destination ||
+    d.receivingHospital ||
+    "-",
+
+  fromDetail: d.fromDetail || "",
+  toDetail: d.toDetail || ""
+};
 }
 
 /* =======================

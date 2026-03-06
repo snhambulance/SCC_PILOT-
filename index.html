@@ -631,7 +631,7 @@ td.col-type{ white-space:normal !important; }  /* allow clamp2 inside */
 
 
   <div class="actionbar">
-    <div class="muted">Data source:(form.html)</div>
+
     <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
       <button class="btn" onclick="location.href='form.html'">+ Add Mission</button>
       <button class="btn secondary" id="exportMonthBtn">Export CSV (This Month)</button>
@@ -1173,16 +1173,87 @@ const TYPE_DISPLAY_LABELS = {
   "PROC_PICK":           "Transport procedural appointment (รับ-คนไข้จากการไปทำหัตถการ)",
   "HOME_PICKUP": "Home pickup (รับ-คนไข้จากบ้าน)",
   "HOME_DISCH":  "Discharge home (ส่ง-คนไข้กลับบ้าน)",
-  "HHC_PICKUP": "6.1 Home Health Care (รับ-คนไข้จากบ้าน)",
-  "HHC_SEND":   "6.2 Home Health Care (ส่ง-คนไข้กลับบ้าน)",
-  "OTHER": "7. Other (เขียนหมายเหตุเพิ่มได้)"
+  "HHC": "Home Health Care",
+  "OTHER": "Other (เขียนหมายเหตุเพิ่มได้)"
 };
 
-function getTypeLabelForTable(m){
-  const k = String(m?.typeKey || "").trim();
-  return TYPE_DISPLAY_LABELS[k] || (m?.type || m?.typeDisplay || "-");
-}
+const TYPE_LABEL_MAP = {
 
+EMS_BASIC: "Basic EMS",
+EMS_ADV: "Advance EMS",
+
+IFT_BASIC_IN: "Basic IFT – Refer In",
+IFT_ADV_IN: "Advance IFT – Refer In",
+IFT_BASIC_OUT: "Basic IFT – Refer Out",
+IFT_ADV_OUT: "Advance IFT – Refer Out",
+
+AP_CLINIC_IFT: "Airport Clinic IFT (รับผู้ป่วยจากคลินิกสนามบิน)",
+AP_ESCORT_IN: "Airport escort and transport (รับ-คนไข้นอกเครื่อง)",
+AP_ESCORT_OUT: "Airport escort and transport (ส่ง-คนไข้นอกเครื่อง)",
+TARMAC_IN: "Tarmac : Airport escort and transport (รับ-คนไข้ข้างเครื่อง)",
+TARMAC_OUT: "Tarmac : Airport escort and transport (ส่ง-คนไข้ข้างเครื่อง)",
+
+PROC_SEND_WAIT_PICK: "Transport for procedural appointment (ส่งและรอรับ-คนไข้ไปทำหัตถการ)",
+PROC_SEND: "Transport procedural appointment (ส่ง-คนไข้ไปทำหัตถการ)",
+PROC_PICK: "Transport procedural appointment (รับ-คนไข้จากการไปทำหัตถการ)",
+
+HOME_PICKUP: "Home pickup (รับ-คนไข้จากบ้าน)",
+HOME_DISCH: "Discharge home (ส่ง-คนไข้กลับบ้าน)",
+
+HHC: "Home Health Care",
+
+EV_SCHOOL_SPORT: "School sports event",
+EV_SCHOOL_EVENT: "School event",
+EV_RUNNING: "Marathon / running event",
+EV_CYCLING: "Cycling event",
+EV_FOOTBALL: "Football match",
+EV_BASKETBALL: "Basketball tournament",
+EV_VOLLEYBALL: "Volleyball tournament",
+EV_BOXING: "Boxing event",
+EV_OTHER_SPORT: "Other sport",
+EV_OTHER_EVENT: "Other event",
+
+OTHER_GENERAL: "Other"
+
+};
+
+
+function getTypeLabelForTable(m){
+
+  if (!m) return "-";
+
+  const key = String(m.typeKey || "").trim();
+
+  // ===== Event / Other / HHC ใช้ typeDisplay =====
+  if (
+    key === "HHC" ||
+    key.startsWith("EV_") ||
+    key === "OTHER_GENERAL"
+  ){
+    let label = String(m.typeDisplay || "").trim();
+
+    if (!label) return "-";
+
+    // fix duplicate detail (HHC case)
+    const parts = label.split("–").map(p => p.trim());
+
+    if (parts.length >= 3 && parts[1] === parts[2]){
+      return `${parts[0]} – ${parts[1]}`;
+    }
+
+    return label;
+  }
+
+  // ===== types อื่นใช้ type =====
+  let label = String(m.type || "").trim();
+
+  if (!label) return "-";
+
+  // remove numbering เช่น 1.1 3.5
+  label = label.replace(/^\s*\d+(\.\d+)*\.?\s*/, "");
+
+  return label;
+}
 /* =======================
    REALTIME SYNC (Index <-> Operation)
 ======================= */
@@ -1754,11 +1825,24 @@ function getFromTo(m){
     };
   }
 
-  return {
-    from: genericFrom || "-",
-    to: genericTo || "-",
-    fromDetail, toDetail
-  };
+  // EMS / Home / HHC / Event / Other
+return {
+  from:
+    d.from ||
+    d.origin ||
+    d.pickupPoint ||
+    d.referringHospital ||
+    "-",
+
+  to:
+    d.to ||
+    d.destination ||
+    d.receivingHospital ||
+    "-",
+
+  fromDetail: d.fromDetail || "",
+  toDetail: d.toDetail || ""
+};
 }
 
 //* ===== Departure cell (highlight edited time) ===== */
@@ -3213,6 +3297,7 @@ if (tableTitle){
   } else {
     if (missionBody){
       missionBody.innerHTML = todayRows.map(m => {
+        console.log("MISSION OBJECT:", m);   // 👈 test
         const typeShort = getTypeLabelForTable(m);
         const ft = getFromTo(m);
         const s = getAutoStatusForDisplay(m);

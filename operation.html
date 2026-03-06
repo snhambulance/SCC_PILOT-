@@ -83,6 +83,16 @@ OPERATION.HTML (copy + paste) ✅ FINAL — FIXED (no boot-dup / no stray code)
     .header img{ height:62px; }
   }
 
+  .btn.primary{
+  background:#0b6b5b;
+  color:white;
+  border:none;
+  padding:8px 14px;
+  border-radius:10px;
+  font-weight:700;
+  cursor:pointer;
+}
+
   .content{
     padding:18px 16px 34px;
     max-width:1620px;
@@ -786,17 +796,22 @@ thead th{ z-index: 2; }
   <h1>Operation</h1>
   <div id="clock">--:--:--</div>
 
-  <div class="actionbar">
-    <div class="muted">Read-only dashboard • กด “On Duty” เพื่อ stamp เวลา</div>
-    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;"></div>
-  </div>
-
+  
   <div class="card">
-    <div class="cardHeader">
-      <h2 class="cardTitle" id="tableTitle">Missions</h2>
+
+  <div class="cardHeader">
+
+    <h2 class="cardTitle" id="tableTitle">Missions</h2>
+
+    <div style="display:flex; gap:10px; align-items:center;">
+
+      <button class="btn primary" onclick="openOperationForm()">
+        ➕ Add Mission
+      </button>
 
       <div class="controls">
         <input id="search" class="input" placeholder="Search: ID / type / from / to / notes">
+
         <select id="statusFilter" class="select">
           <option value="ALL">All status</option>
           <option value="Scheduled">Scheduled</option>
@@ -808,9 +823,13 @@ thead th{ z-index: 2; }
           <option value="Cancelled">Cancelled</option>
           <option value="Pending">Pending</option>
         </select>
+
         <input id="dateFilter" class="input" type="date">
       </div>
+
     </div>
+
+  </div>
 
     <div class="tableWrap">
       <table>
@@ -834,7 +853,7 @@ thead th{ z-index: 2; }
 
     <div class="tinyNote" id="countNote"></div>
   </div>
-</div>
+
 
 <!-- DETAILS MODAL -->
 <div class="modalOverlay" id="modalOverlay" role="dialog" aria-modal="true">
@@ -1397,6 +1416,10 @@ function _activeBlockRank(status){
   return 4;
 }
 
+function openOperationForm(){
+  location.href = "form.html?mode=operation";
+}
+
 /* =========================================================
    TYPE LABEL (display only)
 ========================================================= */
@@ -1418,44 +1441,130 @@ const TYPE_DISPLAY_LABELS = {
   "HOME_PICKUP": "Home pickup (รับ-คนไข้จากบ้าน)",
   "HOME_DISCH": "Discharge home (ส่ง-คนไข้กลับบ้าน)",
   "HHC": "Home Health Care",
-  "HHC_PICKUP": "Home Health Care",
-  "HHC_SEND": "Home Health Care",
-  "OTHER": "Other เขียนหมายเหตุเพิ่มได้"
+  "OTHER": "Other (เขียนหมายเหตุเพิ่มได้)"
 };
+
+
 function getTypeLabelForTable(m){
-  const k = String(m?.typeKey || "").trim();
-  return TYPE_DISPLAY_LABELS[k] || (m?.typeDisplay || m?.type || "-");
+
+  if (!m) return "-";
+
+  const key = String(m.typeKey || "").trim();
+
+  // =========================
+  // Event / HHC / Other
+  // =========================
+  if (key === "HHC" || key.startsWith("EV_") || key === "OTHER_GENERAL"){
+
+    const label = String(m.typeDisplay || "").trim();
+    if (!label) return "-";
+
+    // ถ้ามี pattern "A – B – B"
+    const parts = label.split("–").map(p => p.trim());
+
+    if (parts.length >= 3 && parts[1] === parts[2]){
+      return `${parts[0]} – ${parts[1]}`;
+    }
+
+    return label;
+  }
+
+  // =========================
+  // Default types
+  // =========================
+  const label = String(m.type || "").trim();
+
+  if (!label) return "-";
+
+  // remove numbering
+  return label.replace(/^\s*\d+(\.\d+)*\.?\s*/, "");
 }
 
 /* =========================================================
    FROM/TO MAPPING
 ========================================================= */
 function getFromTo(m){
+
   const d = m.details || {};
   const k = m.typeKey || "";
 
+  // IFT
   if (["IFT_BASIC_IN","IFT_ADV_IN","IFT_BASIC_OUT","IFT_ADV_OUT"].includes(k)){
-    return { from: d.referringHospital || "-", to: d.receivingHospital || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+    return {
+      from: d.referringHospital || d.origin || "-",
+      to: d.receivingHospital || d.destination || "-",
+      fromDetail: d.fromDetail || "",
+      toDetail: d.toDetail || ""
+    };
   }
+
+  // Airport clinic
   if (k === "AP_CLINIC_IFT"){
-    return { from: d.pickupPoint || "-", to: d.receivingHospital || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+    return {
+      from: d.pickupPoint || d.origin || "-",
+      to: d.receivingHospital || d.destination || "-",
+      fromDetail: d.fromDetail || "",
+      toDetail: d.toDetail || ""
+    };
   }
+
+  // Escort IN
   if (["AP_ESCORT_IN","TARMAC_IN"].includes(k)){
-    return { from: d.pickupPoint || "-", to: d.destinationHospital || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+    return {
+      from: d.pickupPoint || d.origin || "-",
+      to: d.destinationHospital || d.destination || "-",
+      fromDetail: d.fromDetail || "",
+      toDetail: d.toDetail || ""
+    };
   }
+
+  // Escort OUT
   if (["AP_ESCORT_OUT","TARMAC_OUT"].includes(k)){
-    return { from: d.sendingHospital || "-", to: d.dropoffPoint || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+    return {
+      from: d.sendingHospital || d.origin || "-",
+      to: d.dropoffPoint || d.destination || "-",
+      fromDetail: d.fromDetail || "",
+      toDetail: d.toDetail || ""
+    };
   }
+
+  // Procedure
   if (["PROC_SEND_WAIT_PICK","PROC_SEND"].includes(k)){
-    return { from: d.originHospital || "-", to: d.procedureFacility || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+    return {
+      from: d.originHospital || d.origin || "-",
+      to: d.procedureFacility || d.destination || "-",
+      fromDetail: d.fromDetail || "",
+      toDetail: d.toDetail || ""
+    };
   }
+
   if (k === "PROC_PICK"){
-    return { from: d.procedureFacility || "-", to: d.returnHospital || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+    return {
+      from: d.procedureFacility || d.origin || "-",
+      to: d.returnHospital || d.destination || "-",
+      fromDetail: d.fromDetail || "",
+      toDetail: d.toDetail || ""
+    };
   }
-  if (["HOME_PICKUP","HOME_DISCH","HHC","HHC_PICKUP","HHC_SEND","OTHER","EMS_BASIC","EMS_ADV"].includes(k)){
-    return { from: d.origin || "-", to: d.destination || "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
-  }
-  return { from: "-", to: "-", fromDetail: d.fromDetail || "", toDetail: d.toDetail || "" };
+
+  // EMS / Home / HHC / Event / Other
+return {
+  from:
+    d.from ||
+    d.origin ||
+    d.pickupPoint ||
+    d.referringHospital ||
+    "-",
+
+  to:
+    d.to ||
+    d.destination ||
+    d.receivingHospital ||
+    "-",
+
+  fromDetail: d.fromDetail || "",
+  toDetail: d.toDetail || ""
+};
 }
 
 /* =========================================================
